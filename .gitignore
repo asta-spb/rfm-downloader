@@ -1,0 +1,32 @@
+## .NET
+bin/
+obj/
+publish/
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+
+## OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+## Build output
+*.exe
+*.dll
+*.pdb
+
+## Secrets / credentials
+config.ini
+run.txt
+
+## Output data
+rfm_data/
+
+## Claude Code
+.claude/
