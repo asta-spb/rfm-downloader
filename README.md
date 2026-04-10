@@ -26,7 +26,7 @@ dotnet build -c Release
 Собрать в один автономный `.exe` (не требует .NET на целевой машине):
 
 ```bat
-dotnet publish -c Release -r win-x64 --self-contained true
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 ```
 
 Готовый файл: `bin\Release\net10.0\win-x64\publish\RfmDownloader.exe`
