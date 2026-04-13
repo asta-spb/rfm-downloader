@@ -9,6 +9,7 @@
  *   RfmDownloader.exe --config other.ini       — другой ini-файл
  *   RfmDownloader.exe --mode prod              — продуктовый контур
  *   RfmDownloader.exe --mode test              — тестовый контур
+ *   RfmDownloader.exe --fes message.xml         — отправить ФЭС
  *   RfmDownloader.exe --list-certs             — список сертификатов
  *
  * Приоритет: ключи командной строки > config.ini > значения по умолчанию
@@ -42,9 +43,10 @@ internal static class Endpoints
         ["te_file"]        = "test-contur/suspect-catalogs/current-te2-file",
         ["mvk_catalog"]    = "test-contur/suspect-catalogs/current-mvk-catalog",
         ["mvk_file"]       = "test-contur/suspect-catalogs/current-mvk-file-zip",
-        ["un_catalog"]     = "suspect-catalogs/current-un-catalog",
-        ["un_catalog_rus"] = "suspect-catalogs/current-un-catalog-rus",
-        ["un_file"]        = "suspect-catalogs/current-un-file",
+        // ООН в тестовом контуре отсутствует (эндпоинты только продуктовые)
+        ["fes_send"]       = "test-contur/fes-messages/send",
+        ["fes_status"]     = "test-contur/fes-messages/status",
+        ["fes_receipt"]    = "test-contur/fes-messages/receipt",
     };
 
     // Продуктовый контур:
@@ -60,6 +62,9 @@ internal static class Endpoints
         ["un_catalog"]     = "suspect-catalogs/current-un-catalog",
         ["un_catalog_rus"] = "suspect-catalogs/current-un-catalog-rus",
         ["un_file"]        = "suspect-catalogs/current-un-file",
+        ["fes_send"]       = "fes-messages/send",
+        ["fes_status"]     = "fes-messages/status",
+        ["fes_receipt"]    = "fes-messages/receipt",
     };
 
     public static Dictionary<string, string> For(RunMode mode)
@@ -84,7 +89,7 @@ internal static class Program
         // Применяем INI как промежуточный слой (CLI > INI > умолчания)
         cfg.ApplyIni(ini);
 
-        Banner(cfg.Mode);
+        Banner(cfg.Mode, cfg.FesFile is not null);
 
         if (ini.SourceFile is not null)
             Logger.Info($"Конфигурация: {ini.SourceFile}");
@@ -97,7 +102,13 @@ internal static class Program
             return 0;
         }
 
+        bool isFesMode = cfg.FesFile is not null;
+
         Logger.Info($"Режим: {(cfg.Mode == RunMode.Prod ? "ПРОДУКТОВЫЙ" : "ТЕСТОВЫЙ")}");
+        if (isFesMode)
+            Logger.Info("Режим запуска: ОТПРАВКА ФЭС");
+        else
+            Logger.Info("Режим запуска: ЗАГРУЗКА ПЕРЕЧНЕЙ");
 
         var outDir = CreateOutputDir(cfg.Output, cfg.Mode);
         Logger.Info($"Папка сохранения: {outDir}");
@@ -119,23 +130,36 @@ internal static class Program
         if (!await client.AuthenticateAsync(cfg.User, cfg.Password))
             return 1;
 
-        await client.DownloadTeAsync(cfg.Mode);
-        await client.DownloadMvkAsync();
-        await client.DownloadUnAsync();
+        if (isFesMode)
+        {
+            // Режим ФЭС: только отправка, статус, квитанция
+            await client.SendFesAsync(cfg.FesFile!);
+        }
+        else
+        {
+            // Режим загрузки перечней: ТЭ, МВК, ООН
+            await client.DownloadTeAsync(cfg.Mode);
+            await client.DownloadMvkAsync();
+
+            if (cfg.Mode == RunMode.Prod)
+                await client.DownloadUnAsync();
+            else
+                Logger.Info("Перечень ООН пропущен (доступен только в продуктовом контуре).");
+        }
 
         Logger.Info("Всё готово!");
         return 0;
     }
 
-    static void Banner(RunMode mode)
+    static void Banner(RunMode mode, bool isFes)
     {
-        string label = mode == RunMode.Prod
-            ? "  Загрузчик данных Росфинмониторинга [ПРОДУКТОВЫЙ]"
-            : "  Загрузчик данных Росфинмониторинга [ТЕСТОВЫЙ]";
-        Console.WriteLine(new string('=', 58));
+        string contour = mode == RunMode.Prod ? "ПРОДУКТОВЫЙ" : "ТЕСТОВЫЙ";
+        string action  = isFes ? "ОТПРАВКА ФЭС" : "ЗАГРУЗКА ПЕРЕЧНЕЙ";
+        string label   = $"  Росфинмониторинг [{contour}] — {action}";
+        Console.WriteLine(new string('=', 62));
         Console.WriteLine(label);
         Console.WriteLine($"  Запуск: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        Console.WriteLine(new string('=', 58));
+        Console.WriteLine(new string('=', 62));
     }
 
     static string CreateOutputDir(string basePath, RunMode mode)
@@ -316,6 +340,75 @@ internal sealed class RfmClient : IDisposable
                     new Dictionary<string, string> { ["id"] = fileId }, "un_file.xml");
             }
             catch (Exception ex) { Logger.Error($"Ошибка xml ООН: {ex.Message}"); }
+        }
+    }
+
+    // ── ФЭС — отправка, статус, квитанция ─────────────────────────────────
+
+    public async Task SendFesAsync(string filePath)
+    {
+        Logger.Step($"Отправка ФЭС: {Path.GetFileName(filePath)}...");
+        string? messageId = null;
+        try
+        {
+            byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+            string base64    = Convert.ToBase64String(fileBytes);
+
+            var body = new { fileName = Path.GetFileName(filePath), content = base64 };
+            var json = await PostJsonAsync(_ep["fes_send"], body);
+            SaveJson(json, "fes_send_response.json");
+
+            messageId = json?["value"]?["id"]?.GetValue<string>()
+                     ?? json?["id"]?.GetValue<string>();
+
+            if (messageId is null)
+            {
+                Logger.Warn("Идентификатор ФЭС-сообщения не получен.");
+                return;
+            }
+            Logger.Info($"ФЭС отправлен, id={messageId}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Ошибка отправки ФЭС: {ex.Message}");
+            return;
+        }
+
+        await CheckFesStatusAsync(messageId);
+        await DownloadFesReceiptAsync(messageId);
+    }
+
+    async Task CheckFesStatusAsync(string messageId)
+    {
+        Logger.Step($"Проверка статуса ФЭС (id={messageId})...");
+        try
+        {
+            var body = new { id = messageId };
+            var json = await PostJsonAsync(_ep["fes_status"], body);
+            SaveJson(json, "fes_status_response.json");
+
+            string? status = json?["value"]?["status"]?.GetValue<string>()
+                          ?? json?["status"]?.GetValue<string>();
+
+            Logger.Info($"Статус ФЭС: {status ?? "(не определён)"}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Ошибка статуса ФЭС: {ex.Message}");
+        }
+    }
+
+    async Task DownloadFesReceiptAsync(string messageId)
+    {
+        Logger.Step($"Загрузка квитанции ФЭС (id={messageId})...");
+        try
+        {
+            await PostFormToBinaryAsync(_ep["fes_receipt"],
+                new Dictionary<string, string> { ["id"] = messageId }, "fes_receipt.xml");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Ошибка квитанции ФЭС: {ex.Message}");
         }
     }
 
@@ -513,9 +606,10 @@ internal sealed class AppArgs
     public RunMode Mode       { get; private set; } = RunMode.Test;
     public bool    ListCerts  { get; private set; }
     public string  ConfigFile { get; private set; } = IniConfig.DefaultFile;
+    public string? FesFile    { get; private set; }
 
     // Флаги явной установки через CLI
-    bool _userSet, _passwordSet, _thumbprintSet, _outputSet, _timeoutSet, _modeSet;
+    bool _userSet, _passwordSet, _thumbprintSet, _outputSet, _timeoutSet, _modeSet, _fesSet;
 
     public static AppArgs Parse(string[] argv)
     {
@@ -536,6 +630,7 @@ internal sealed class AppArgs
                     a.Mode     = ParseMode(argv[++i]);
                     a._modeSet = true;
                     break;
+                case "--fes"        when i + 1 < argv.Length: a.FesFile   = argv[++i]; a._fesSet        = true; break;
                 case "--list-certs": a.ListCerts = true; break;
                 case "--help":
                 case "-h":
@@ -556,6 +651,7 @@ internal sealed class AppArgs
         if (!_outputSet     && ini.Get("folder")     is string f)   Output     = f;
         if (!_timeoutSet    && ini.GetInt("timeout") is int sec)    TimeoutSec = sec;
         if (!_modeSet       && ini.Get("mode")       is string m)   Mode       = ParseMode(m);
+        if (!_fesSet        && ini.Get("fes_file")   is string ff)  FesFile    = ff;
     }
 
     static RunMode ParseMode(string s)
@@ -574,6 +670,7 @@ internal sealed class AppArgs
             "  --thumbprint  <отпечаток>  Отпечаток сертификата Windows\n" +
             "  --output      <папка>      Базовая папка для файлов    (по умолчанию: rfm_data)\n" +
             "  --timeout     <секунды>    Таймаут HTTP                (по умолчанию: 60)\n" +
+            "  --fes         <файл>       XML-файл ФЭС для отправки\n" +
             "  --list-certs               Показать сертификаты и выйти\n" +
             "  --help                     Эта справка\n\n" +
             "Приоритет: ключи командной строки > config.ini > значения по умолчанию\n\n" +
@@ -582,7 +679,8 @@ internal sealed class AppArgs
             "  RfmDownloader.exe                              (тестовый, из config.ini)\n" +
             "  RfmDownloader.exe --mode prod                  (продуктовый, из config.ini)\n" +
             "  RfmDownloader.exe --config prod.ini            (отдельный ini для прода)\n" +
-            "  RfmDownloader.exe --mode prod --output D:\\rfm  (прод + своя папка)"
+            "  RfmDownloader.exe --mode prod --output D:\\rfm  (прод + своя папка)\n" +
+            "  RfmDownloader.exe --fes message.xml            (отправить ФЭС)"
         );
     }
 }
