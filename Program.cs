@@ -10,6 +10,8 @@
  *   RfmDownloader.exe --mode prod              — продуктовый контур
  *   RfmDownloader.exe --mode test              — тестовый контур
  *   RfmDownloader.exe --fes message.xml         — отправить ФЭС
+ *   RfmDownloader.exe --fes msg.xml --mchd m.xml — отправить ФЭС с МЧД
+ *   RfmDownloader.exe --log rfm.log              — с записью в лог-файл
  *   RfmDownloader.exe --list-certs             — список сертификатов
  *
  * Приоритет: ключи командной строки > config.ini > значения по умолчанию
@@ -44,9 +46,10 @@ internal static class Endpoints
         ["mvk_catalog"]    = "test-contur/suspect-catalogs/current-mvk-catalog",
         ["mvk_file"]       = "test-contur/suspect-catalogs/current-mvk-file-zip",
         // ООН в тестовом контуре отсутствует (эндпоинты только продуктовые)
-        ["fes_send"]       = "test-contur/fes-messages/send",
-        ["fes_status"]     = "test-contur/fes-messages/status",
-        ["fes_receipt"]    = "test-contur/fes-messages/receipt",
+        ["fes_send"]       = "test-contur/formalized-message/send",
+        ["fes_send_mchd"]  = "test-contur/formalized-message/send-with-mchd",
+        ["fes_status"]     = "test-contur/formalized-message/check-status",
+        ["fes_receipt"]    = "test-contur/formalized-message/get-ticket",
     };
 
     // Продуктовый контур:
@@ -62,9 +65,10 @@ internal static class Endpoints
         ["un_catalog"]     = "suspect-catalogs/current-un-catalog",
         ["un_catalog_rus"] = "suspect-catalogs/current-un-catalog-rus",
         ["un_file"]        = "suspect-catalogs/current-un-file",
-        ["fes_send"]       = "fes-messages/send",
-        ["fes_status"]     = "fes-messages/status",
-        ["fes_receipt"]    = "fes-messages/receipt",
+        ["fes_send"]       = "formalized-message/send",
+        ["fes_send_mchd"]  = "formalized-message/send-with-mchd",
+        ["fes_status"]     = "formalized-message/check-status",
+        ["fes_receipt"]    = "formalized-message/get-ticket",
     };
 
     public static Dictionary<string, string> For(RunMode mode)
@@ -89,66 +93,86 @@ internal static class Program
         // Применяем INI как промежуточный слой (CLI > INI > умолчания)
         cfg.ApplyIni(ini);
 
-        Banner(cfg.Mode, cfg.FesFile is not null);
+        // Лог-файл (CLI > INI)
+        if (cfg.LogFile is not null)
+            Logger.SetLogFile(cfg.LogFile);
 
-        if (ini.SourceFile is not null)
-            Logger.Info($"Конфигурация: {ini.SourceFile}");
-        else if (cfg.ConfigFile != IniConfig.DefaultFile)
-            Logger.Warn($"Файл конфигурации не найден: {cfg.ConfigFile}");
-
-        if (cfg.ListCerts)
+        try
         {
-            CertHelper.ListCerts();
+            Banner(cfg.Mode, cfg.FesFile is not null);
+
+            if (cfg.LogFile is not null)
+                Logger.Info($"Лог-файл: {Path.GetFullPath(cfg.LogFile)}");
+
+            if (ini.SourceFile is not null)
+                Logger.Info($"Конфигурация: {ini.SourceFile}");
+            else if (cfg.ConfigFile != IniConfig.DefaultFile)
+                Logger.Warn($"Файл конфигурации не найден: {cfg.ConfigFile}");
+
+            if (cfg.ListCerts)
+            {
+                CertHelper.ListCerts();
+                return 0;
+            }
+
+            bool isFesMode = cfg.FesFile is not null;
+
+            Logger.Info($"Режим: {(cfg.Mode == RunMode.Prod ? "ПРОДУКТОВЫЙ" : "ТЕСТОВЫЙ")}");
+            if (isFesMode)
+                Logger.Info("Режим запуска: ОТПРАВКА ФЭС");
+            else
+                Logger.Info("Режим запуска: ЗАГРУЗКА ПЕРЕЧНЕЙ");
+
+            var outDir = CreateOutputDir(cfg.Output, cfg.Mode);
+            Logger.Info($"Папка сохранения: {outDir}");
+
+            var cert = CertHelper.FindCert(cfg.Thumbprint);
+            if (cert is null && cfg.Thumbprint is not null)
+            {
+                Logger.Error($"Сертификат с отпечатком «{cfg.Thumbprint}» не найден.");
+                return 1;
+            }
+            if (cert is not null)
+                Logger.Info($"Сертификат: {cert.Subject}  [{cert.Thumbprint}]");
+            else
+                Logger.Warn("Сертификат не указан — попытка без клиентского сертификата.");
+
+            var ep = Endpoints.For(cfg.Mode);
+            using var client = new RfmClient(cert, outDir, cfg.TimeoutSec, ep, cfg.SaveRequests);
+
+            if (cfg.SaveRequests)
+                Logger.Info("Сохранение тел запросов: ВКЛЮЧЕНО");
+
+            if (!await client.AuthenticateAsync(cfg.User, cfg.Password))
+                return 1;
+
+            if (isFesMode)
+            {
+                // Режим ФЭС: только отправка, статус, квитанция
+                if (cfg.MchdFiles is { Length: > 0 })
+                    await client.SendFesWithMchdAsync(cfg.FesFile!, cfg.MchdFiles);
+                else
+                    await client.SendFesAsync(cfg.FesFile!);
+            }
+            else
+            {
+                // Режим загрузки перечней: ТЭ, МВК, ООН
+                await client.DownloadTeAsync(cfg.Mode);
+                await client.DownloadMvkAsync();
+
+                if (cfg.Mode == RunMode.Prod)
+                    await client.DownloadUnAsync();
+                else
+                    Logger.Info("Перечень ООН пропущен (доступен только в продуктовом контуре).");
+            }
+
+            Logger.Info("Всё готово!");
             return 0;
         }
-
-        bool isFesMode = cfg.FesFile is not null;
-
-        Logger.Info($"Режим: {(cfg.Mode == RunMode.Prod ? "ПРОДУКТОВЫЙ" : "ТЕСТОВЫЙ")}");
-        if (isFesMode)
-            Logger.Info("Режим запуска: ОТПРАВКА ФЭС");
-        else
-            Logger.Info("Режим запуска: ЗАГРУЗКА ПЕРЕЧНЕЙ");
-
-        var outDir = CreateOutputDir(cfg.Output, cfg.Mode);
-        Logger.Info($"Папка сохранения: {outDir}");
-
-        var cert = CertHelper.FindCert(cfg.Thumbprint);
-        if (cert is null && cfg.Thumbprint is not null)
+        finally
         {
-            Logger.Error($"Сертификат с отпечатком «{cfg.Thumbprint}» не найден.");
-            return 1;
+            Logger.Close();
         }
-        if (cert is not null)
-            Logger.Info($"Сертификат: {cert.Subject}  [{cert.Thumbprint}]");
-        else
-            Logger.Warn("Сертификат не указан — попытка без клиентского сертификата.");
-
-        var ep = Endpoints.For(cfg.Mode);
-        using var client = new RfmClient(cert, outDir, cfg.TimeoutSec, ep);
-
-        if (!await client.AuthenticateAsync(cfg.User, cfg.Password))
-            return 1;
-
-        if (isFesMode)
-        {
-            // Режим ФЭС: только отправка, статус, квитанция
-            await client.SendFesAsync(cfg.FesFile!);
-        }
-        else
-        {
-            // Режим загрузки перечней: ТЭ, МВК, ООН
-            await client.DownloadTeAsync(cfg.Mode);
-            await client.DownloadMvkAsync();
-
-            if (cfg.Mode == RunMode.Prod)
-                await client.DownloadUnAsync();
-            else
-                Logger.Info("Перечень ООН пропущен (доступен только в продуктовом контуре).");
-        }
-
-        Logger.Info("Всё готово!");
-        return 0;
     }
 
     static void Banner(RunMode mode, bool isFes)
@@ -178,19 +202,35 @@ internal static class Program
 
 internal static class Logger
 {
-    public static void Info(string msg)  => Write(msg, "✓", ConsoleColor.Green);
-    public static void Step(string msg)  => Write(msg, "→", ConsoleColor.Cyan);
-    public static void Warn(string msg)  => Write(msg, "⚠", ConsoleColor.Yellow);
-    public static void Error(string msg) => Write(msg, "✗", ConsoleColor.Red);
+    static StreamWriter? _fileWriter;
 
-    static void Write(string msg, string icon, ConsoleColor color)
+    public static void SetLogFile(string path)
     {
-        Console.Write($"[{DateTime.Now:HH:mm:ss}] ");
+        string? dir = Path.GetDirectoryName(path);
+        if (dir is { Length: > 0 })
+            Directory.CreateDirectory(dir);
+        _fileWriter = new StreamWriter(path, append: true, Encoding.UTF8) { AutoFlush = true };
+    }
+
+    public static void Close() => _fileWriter?.Dispose();
+
+    public static void Info(string msg)  => Write(msg, "✓", ConsoleColor.Green,  "INFO");
+    public static void Step(string msg)  => Write(msg, "→", ConsoleColor.Cyan,   "STEP");
+    public static void Warn(string msg)  => Write(msg, "⚠", ConsoleColor.Yellow, "WARN");
+    public static void Error(string msg) => Write(msg, "✗", ConsoleColor.Red,    "ERROR");
+
+    static void Write(string msg, string icon, ConsoleColor color, string level)
+    {
+        string ts = DateTime.Now.ToString("HH:mm:ss");
+
+        Console.Write($"[{ts}] ");
         var prev = Console.ForegroundColor;
         Console.ForegroundColor = color;
         Console.Write(icon);
         Console.ForegroundColor = prev;
         Console.WriteLine($" {msg}");
+
+        _fileWriter?.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {msg}");
     }
 }
 
@@ -205,13 +245,15 @@ internal sealed class RfmClient : IDisposable
     readonly HttpClient                  _http;
     readonly string                      _outDir;
     readonly Dictionary<string, string>  _ep;
+    readonly bool                        _saveRequests;
     string?                              _token;
 
     public RfmClient(X509Certificate2? cert, string outDir, int timeoutSec,
-                     Dictionary<string, string> endpoints)
+                     Dictionary<string, string> endpoints, bool saveRequests = false)
     {
-        _outDir = outDir;
-        _ep     = endpoints;
+        _outDir       = outDir;
+        _ep           = endpoints;
+        _saveRequests = saveRequests;
 
         var handler = new HttpClientHandler
         {
@@ -238,10 +280,12 @@ internal sealed class RfmClient : IDisposable
         try
         {
             var body = new { userName = user, password };
-            var json = await PostJsonAsync(_ep["auth"], body);
+            var json = await PostJsonAsync(_ep["auth"], body, "auth_request.json");
             SaveJson(json, "auth_response.json");
 
-            _token = json?["value"]?["accessToken"]?.GetValue<string>();
+            // Документация (Табл. 5/17) указывает access_token, примеры — accessToken
+            _token = json?["value"]?["accessToken"]?.GetValue<string>()
+                  ?? json?["value"]?["access_token"]?.GetValue<string>();
 
             if (!string.IsNullOrEmpty(_token) && _token != "token")
                 Logger.Info("Авторизация успешна, JWT-токен получен");
@@ -269,7 +313,7 @@ internal sealed class RfmClient : IDisposable
         Logger.Step(label);
         try
         {
-            var catalog = await PostJsonAsync(_ep["te_catalog"], new { });
+            var catalog = await PostJsonAsync(_ep["te_catalog"], new { }, "te_catalog_request.json");
             SaveJson(catalog, "te_catalog.json");
 
             // v2 возвращает idXml или idDbf; v2.1 возвращает IdXml (с заглавной)
@@ -282,7 +326,8 @@ internal sealed class RfmClient : IDisposable
             Logger.Step($"Загрузка файла ТЭ (id={fileId})...");
             // v2.1 возвращает application/zip; v2 — application/octet-stream
             await PostFormToBinaryAsync(_ep["te_file"],
-                new Dictionary<string, string> { ["id"] = fileId }, "te_file.zip");
+                new Dictionary<string, string> { ["id"] = fileId }, "te_file.zip",
+                "te_file_request.json");
         }
         catch (Exception ex) { Logger.Error($"Ошибка ТЭ: {ex.Message}"); }
     }
@@ -294,7 +339,7 @@ internal sealed class RfmClient : IDisposable
         Logger.Step("Загрузка каталога МВК...");
         try
         {
-            var catalog = await PostJsonAsync(_ep["mvk_catalog"], new { });
+            var catalog = await PostJsonAsync(_ep["mvk_catalog"], new { }, "mvk_catalog_request.json");
             SaveJson(catalog, "mvk_catalog.json");
 
             string? fileId = catalog?["idXml"]?.GetValue<string>();
@@ -302,7 +347,8 @@ internal sealed class RfmClient : IDisposable
 
             Logger.Step($"Загрузка zip-файла МВК (id={fileId})...");
             await PostFormToBinaryAsync(_ep["mvk_file"],
-                new Dictionary<string, string> { ["id"] = fileId }, "mvk_file.zip");
+                new Dictionary<string, string> { ["id"] = fileId }, "mvk_file.zip",
+                "mvk_file_request.json");
         }
         catch (Exception ex) { Logger.Error($"Ошибка МВК: {ex.Message}"); }
     }
@@ -316,7 +362,7 @@ internal sealed class RfmClient : IDisposable
         Logger.Step("Загрузка каталога ООН (EN)...");
         try
         {
-            var cat = await PostJsonAsync(_ep["un_catalog"], new { });
+            var cat = await PostJsonAsync(_ep["un_catalog"], new { }, "un_catalog_en_request.json");
             SaveJson(cat, "un_catalog_en.json");
             fileId = cat?["idXml"]?.GetValue<string>()
                   ?? cat?["IdXml"]?.GetValue<string>();
@@ -326,7 +372,7 @@ internal sealed class RfmClient : IDisposable
         Logger.Step("Загрузка каталога ООН (RU)...");
         try
         {
-            var catRu = await PostJsonAsync(_ep["un_catalog_rus"], new { });
+            var catRu = await PostJsonAsync(_ep["un_catalog_rus"], new { }, "un_catalog_ru_request.json");
             SaveJson(catRu, "un_catalog_ru.json");
         }
         catch (Exception ex) { Logger.Error($"Ошибка каталога ООН RU: {ex.Message}"); }
@@ -336,8 +382,11 @@ internal sealed class RfmClient : IDisposable
             Logger.Step($"Загрузка xml-файла ООН (id={fileId})...");
             try
             {
+                // Табл. 22 документации: параметр "id", form-urlencoded
+                // Пример 3.5.22: { "idXml": "..." } — расхождение; следуем таблице
                 await PostFormToBinaryAsync(_ep["un_file"],
-                    new Dictionary<string, string> { ["id"] = fileId }, "un_file.xml");
+                    new Dictionary<string, string> { ["id"] = fileId }, "un_file.xml",
+                    "un_file_request.json");
             }
             catch (Exception ex) { Logger.Error($"Ошибка xml ООН: {ex.Message}"); }
         }
@@ -348,18 +397,33 @@ internal sealed class RfmClient : IDisposable
     public async Task SendFesAsync(string filePath)
     {
         Logger.Step($"Отправка ФЭС: {Path.GetFileName(filePath)}...");
+
+        // Ищем файл подписи (.sig) рядом с XML
+        string sigPath = filePath + ".sig";
+        if (!File.Exists(sigPath))
+            sigPath = Path.ChangeExtension(filePath, ".sig");
+        if (!File.Exists(sigPath))
+        {
+            Logger.Error($"Файл подписи не найден: ожидается {filePath}.sig или {Path.ChangeExtension(filePath, ".sig")}");
+            return;
+        }
+        Logger.Info($"Файл подписи: {Path.GetFileName(sigPath)}");
+
         string? messageId = null;
+        string? externalId = null;
         try
         {
             byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
-            string base64    = Convert.ToBase64String(fileBytes);
+            byte[] sigBytes  = await File.ReadAllBytesAsync(sigPath);
 
-            var body = new { fileName = Path.GetFileName(filePath), content = base64 };
-            var json = await PostJsonAsync(_ep["fes_send"], body);
+            var json = await PostMultipartAsync(_ep["fes_send"], fileBytes,
+                Path.GetFileName(filePath), sigBytes, "fes_send_request.json");
             SaveJson(json, "fes_send_response.json");
 
-            messageId = json?["value"]?["id"]?.GetValue<string>()
-                     ?? json?["id"]?.GetValue<string>();
+            messageId  = json?["IdFormalizedMessage"]?.GetValue<string>();
+            externalId = json?["IdExternal"]?.GetValue<string>();
+            string? statusName = json?["FormalizedMessageStatusName"]?.GetValue<string>();
+            string? note       = json?["Note"]?.GetValue<string>();
 
             if (messageId is null)
             {
@@ -367,6 +431,12 @@ internal sealed class RfmClient : IDisposable
                 return;
             }
             Logger.Info($"ФЭС отправлен, id={messageId}");
+            if (externalId is not null)
+                Logger.Info($"Внешний id: {externalId}");
+            if (statusName is not null)
+                Logger.Info($"Статус: {statusName}");
+            if (note is not null)
+                Logger.Info($"Примечание: {note}");
         }
         catch (Exception ex)
         {
@@ -374,23 +444,114 @@ internal sealed class RfmClient : IDisposable
             return;
         }
 
-        await CheckFesStatusAsync(messageId);
-        await DownloadFesReceiptAsync(messageId);
+        await CheckFesStatusAsync(messageId, externalId);
+        await DownloadFesReceiptAsync(messageId, externalId);
     }
 
-    async Task CheckFesStatusAsync(string messageId)
+    // ── ФЭС с МЧД — send-with-mchd ──────────────────────────────────────
+
+    public async Task SendFesWithMchdAsync(string filePath, string[] mchdFiles)
+    {
+        Logger.Step($"Отправка ФЭС с МЧД: {Path.GetFileName(filePath)}...");
+
+        // Подпись ФЭС
+        string sigPath = filePath + ".sig";
+        if (!File.Exists(sigPath))
+            sigPath = Path.ChangeExtension(filePath, ".sig");
+        if (!File.Exists(sigPath))
+        {
+            Logger.Error($"Файл подписи ФЭС не найден: ожидается {filePath}.sig или {Path.ChangeExtension(filePath, ".sig")}");
+            return;
+        }
+        Logger.Info($"Файл подписи ФЭС: {Path.GetFileName(sigPath)}");
+
+        // Проверяем МЧД-файлы и их подписи
+        var mchdPairs = new List<(string file, string sig)>();
+        foreach (string mchdPath in mchdFiles)
+        {
+            if (!File.Exists(mchdPath))
+            {
+                Logger.Error($"МЧД-файл не найден: {mchdPath}");
+                return;
+            }
+
+            string mchdSigPath = mchdPath + ".sig";
+            if (!File.Exists(mchdSigPath))
+                mchdSigPath = Path.ChangeExtension(mchdPath, ".sig");
+            if (!File.Exists(mchdSigPath))
+            {
+                Logger.Error($"Подпись МЧД не найдена: ожидается {mchdPath}.sig или {Path.ChangeExtension(mchdPath, ".sig")}");
+                return;
+            }
+
+            mchdPairs.Add((mchdPath, mchdSigPath));
+            Logger.Info($"МЧД: {Path.GetFileName(mchdPath)}, подпись: {Path.GetFileName(mchdSigPath)}");
+        }
+
+        string? messageId = null;
+        string? externalId = null;
+        try
+        {
+            byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+            byte[] sigBytes  = await File.ReadAllBytesAsync(sigPath);
+
+            var mchdBytesList    = new List<byte[]>();
+            var mchdSigBytesList = new List<byte[]>();
+            foreach (var (mf, ms) in mchdPairs)
+            {
+                mchdBytesList.Add(await File.ReadAllBytesAsync(mf));
+                mchdSigBytesList.Add(await File.ReadAllBytesAsync(ms));
+            }
+
+            var json = await PostMultipartMchdAsync(_ep["fes_send_mchd"], fileBytes,
+                Path.GetFileName(filePath), sigBytes,
+                mchdBytesList, mchdSigBytesList, mchdPairs,
+                "fes_send_mchd_request.json");
+            SaveJson(json, "fes_send_mchd_response.json");
+
+            messageId  = json?["IdFormalizedMessage"]?.GetValue<string>();
+            externalId = json?["IdExternal"]?.GetValue<string>();
+            string? statusName = json?["FormalizedMessageStatusName"]?.GetValue<string>();
+            string? note       = json?["Note"]?.GetValue<string>();
+
+            if (messageId is null)
+            {
+                Logger.Warn("Идентификатор ФЭС-сообщения не получен.");
+                return;
+            }
+            Logger.Info($"ФЭС с МЧД отправлен, id={messageId}");
+            if (externalId is not null)
+                Logger.Info($"Внешний id: {externalId}");
+            if (statusName is not null)
+                Logger.Info($"Статус: {statusName}");
+            if (note is not null)
+                Logger.Info($"Примечание: {note}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Ошибка отправки ФЭС с МЧД: {ex.Message}");
+            return;
+        }
+
+        await CheckFesStatusAsync(messageId, externalId);
+        await DownloadFesReceiptAsync(messageId, externalId);
+    }
+
+    async Task CheckFesStatusAsync(string messageId, string? externalId)
     {
         Logger.Step($"Проверка статуса ФЭС (id={messageId})...");
         try
         {
-            var body = new { id = messageId };
-            var json = await PostJsonAsync(_ep["fes_status"], body);
+            var body = new { IdFormalizedMessage = messageId, IdExternal = externalId ?? "" };
+            var json = await PostJsonAsync(_ep["fes_status"], body, "fes_status_request.json");
             SaveJson(json, "fes_status_response.json");
 
-            string? status = json?["value"]?["status"]?.GetValue<string>()
-                          ?? json?["status"]?.GetValue<string>();
+            string? statusName = json?["FormalizedMessageStatusName"]?.GetValue<string>();
+            string? note       = json?["Note"]?.GetValue<string>();
 
-            Logger.Info($"Статус ФЭС: {status ?? "(не определён)"}");
+            Logger.Info($"Статус ФЭС: {statusName ?? "(не определён)"}");
+            if (note is not null)
+                Logger.Info($"Примечание: {note}");
         }
         catch (Exception ex)
         {
@@ -398,13 +559,14 @@ internal sealed class RfmClient : IDisposable
         }
     }
 
-    async Task DownloadFesReceiptAsync(string messageId)
+    async Task DownloadFesReceiptAsync(string messageId, string? externalId)
     {
         Logger.Step($"Загрузка квитанции ФЭС (id={messageId})...");
         try
         {
-            await PostFormToBinaryAsync(_ep["fes_receipt"],
-                new Dictionary<string, string> { ["id"] = messageId }, "fes_receipt.xml");
+            await PostJsonToBinaryAsync(_ep["fes_receipt"],
+                new { IdFormalizedMessage = messageId, IdExternal = externalId ?? "" },
+                "fes_receipt.xml", "fes_receipt_request.json");
         }
         catch (Exception ex)
         {
@@ -414,11 +576,107 @@ internal sealed class RfmClient : IDisposable
 
     // ── HTTP-хелперы ────────────────────────────────────────────────────────
 
-    async Task<JsonNode?> PostJsonAsync(string endpoint, object body)
+    async Task<JsonNode?> PostMultipartAsync(string endpoint,
+        byte[] fileBytes, string fileName, byte[] sigBytes,
+        string? requestFileName = null)
     {
+        if (_saveRequests && requestFileName is not null)
+            SaveRawJson(JsonSerializer.Serialize(new { file = fileName, signLength = sigBytes.Length }), requestFileName);
+
+        using var content = new MultipartFormDataContent();
+        content.Add(new ByteArrayContent(fileBytes), "file", fileName);
+        content.Add(new ByteArrayContent(sigBytes), "sign", fileName + ".sig");
+
         using var req = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/{endpoint}");
-        req.Content = new StringContent(
-            JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        req.Content = content;
+        AddAuth(req);
+
+        using var resp = await _http.SendAsync(req);
+        string raw = await resp.Content.ReadAsStringAsync();
+
+        if (!resp.IsSuccessStatusCode)
+            throw new HttpRequestException(
+                $"HTTP {(int)resp.StatusCode}: {raw[..Math.Min(200, raw.Length)]}");
+
+        return JsonNode.Parse(raw);
+    }
+
+    async Task<JsonNode?> PostMultipartMchdAsync(string endpoint,
+        byte[] fileBytes, string fileName, byte[] sigBytes,
+        List<byte[]> mchdBytesList, List<byte[]> mchdSigBytesList,
+        List<(string file, string sig)> mchdPairs,
+        string? requestFileName = null)
+    {
+        if (_saveRequests && requestFileName is not null)
+            SaveRawJson(JsonSerializer.Serialize(new
+            {
+                file = fileName,
+                signLength = sigBytes.Length,
+                mchdCount = mchdBytesList.Count
+            }), requestFileName);
+
+        using var content = new MultipartFormDataContent();
+        content.Add(new ByteArrayContent(fileBytes), "file", fileName);
+        content.Add(new ByteArrayContent(sigBytes), "sign", fileName + ".sig");
+
+        for (int i = 0; i < mchdBytesList.Count; i++)
+        {
+            string mchdFileName = Path.GetFileName(mchdPairs[i].file);
+            string mchdSigFileName = Path.GetFileName(mchdPairs[i].sig);
+            content.Add(new ByteArrayContent(mchdBytesList[i]), "mchd", mchdFileName);
+            content.Add(new ByteArrayContent(mchdSigBytesList[i]), "mchdSign", mchdSigFileName);
+        }
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/{endpoint}");
+        req.Content = content;
+        AddAuth(req);
+
+        using var resp = await _http.SendAsync(req);
+        string raw = await resp.Content.ReadAsStringAsync();
+
+        if (!resp.IsSuccessStatusCode)
+            throw new HttpRequestException(
+                $"HTTP {(int)resp.StatusCode}: {raw[..Math.Min(200, raw.Length)]}");
+
+        return JsonNode.Parse(raw);
+    }
+
+    async Task PostJsonToBinaryAsync(string endpoint, object body,
+        string fileName, string? requestFileName = null)
+    {
+        string serialized = JsonSerializer.Serialize(body);
+
+        if (_saveRequests && requestFileName is not null)
+            SaveRawJson(serialized, requestFileName);
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/{endpoint}");
+        req.Content = new StringContent(serialized, Encoding.UTF8, "application/json");
+        AddAuth(req);
+
+        using var resp = await _http.SendAsync(req);
+        if (!resp.IsSuccessStatusCode)
+        {
+            string err = await resp.Content.ReadAsStringAsync();
+            throw new HttpRequestException(
+                $"HTTP {(int)resp.StatusCode}: {err[..Math.Min(200, err.Length)]}");
+        }
+
+        byte[] bytes = await resp.Content.ReadAsByteArrayAsync();
+        string path  = Path.Combine(_outDir, fileName);
+        await File.WriteAllBytesAsync(path, bytes);
+        Logger.Info($"Квитанция сохранена: {fileName}  ({bytes.Length:N0} байт)");
+    }
+
+    async Task<JsonNode?> PostJsonAsync(string endpoint, object body,
+        string? requestFileName = null)
+    {
+        string serialized = JsonSerializer.Serialize(body);
+
+        if (_saveRequests && requestFileName is not null)
+            SaveRawJson(serialized, requestFileName);
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/{endpoint}");
+        req.Content = new StringContent(serialized, Encoding.UTF8, "application/json");
         AddAuth(req);
 
         using var resp = await _http.SendAsync(req);
@@ -432,8 +690,12 @@ internal sealed class RfmClient : IDisposable
     }
 
     async Task PostFormToBinaryAsync(string endpoint,
-        Dictionary<string, string> fields, string fileName)
+        Dictionary<string, string> fields, string fileName,
+        string? requestFileName = null)
     {
+        if (_saveRequests && requestFileName is not null)
+            SaveRawJson(JsonSerializer.Serialize(fields), requestFileName);
+
         using var req = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/{endpoint}");
         req.Content = new FormUrlEncodedContent(fields);
         AddAuth(req);
@@ -452,6 +714,16 @@ internal sealed class RfmClient : IDisposable
     {
         if (!string.IsNullOrEmpty(_token))
             req.Headers.Add("Authorization", $"bearer {_token}");
+    }
+
+    void SaveRawJson(string raw, string fileName)
+    {
+        // Re-parse and re-serialize with indentation for readability
+        string path = Path.Combine(_outDir, fileName);
+        var opts = new JsonSerializerOptions { WriteIndented = true };
+        var node = JsonNode.Parse(raw);
+        File.WriteAllText(path, node?.ToJsonString(opts) ?? raw, Encoding.UTF8);
+        Logger.Info($"JSON запроса сохранён: {fileName}");
     }
 
     void SaveJson(JsonNode? node, string fileName)
@@ -605,11 +877,14 @@ internal sealed class AppArgs
     public int     TimeoutSec { get; private set; } = 60;
     public RunMode Mode       { get; private set; } = RunMode.Test;
     public bool    ListCerts  { get; private set; }
-    public string  ConfigFile { get; private set; } = IniConfig.DefaultFile;
-    public string? FesFile    { get; private set; }
+    public string  ConfigFile    { get; private set; } = IniConfig.DefaultFile;
+    public string? FesFile       { get; private set; }
+    public string[]? MchdFiles   { get; private set; }
+    public bool    SaveRequests  { get; private set; }
+    public string? LogFile       { get; private set; }
 
     // Флаги явной установки через CLI
-    bool _userSet, _passwordSet, _thumbprintSet, _outputSet, _timeoutSet, _modeSet, _fesSet;
+    bool _userSet, _passwordSet, _thumbprintSet, _outputSet, _timeoutSet, _modeSet, _fesSet, _mchdSet, _saveRequestsSet, _logFileSet;
 
     public static AppArgs Parse(string[] argv)
     {
@@ -631,6 +906,12 @@ internal sealed class AppArgs
                     a._modeSet = true;
                     break;
                 case "--fes"        when i + 1 < argv.Length: a.FesFile   = argv[++i]; a._fesSet        = true; break;
+                case "--mchd"       when i + 1 < argv.Length:
+                    a.MchdFiles = argv[++i].Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    a._mchdSet  = true;
+                    break;
+                case "--log"           when i + 1 < argv.Length: a.LogFile = argv[++i]; a._logFileSet = true; break;
+                case "--save-requests": a.SaveRequests = true; a._saveRequestsSet = true; break;
                 case "--list-certs": a.ListCerts = true; break;
                 case "--help":
                 case "-h":
@@ -652,6 +933,12 @@ internal sealed class AppArgs
         if (!_timeoutSet    && ini.GetInt("timeout") is int sec)    TimeoutSec = sec;
         if (!_modeSet       && ini.Get("mode")       is string m)   Mode       = ParseMode(m);
         if (!_fesSet        && ini.Get("fes_file")   is string ff)  FesFile    = ff;
+        if (!_mchdSet       && ini.Get("mchd_files") is string mf)
+            MchdFiles = mf.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        if (!_saveRequestsSet && ini.Get("save_requests") is string sr)
+            SaveRequests = sr.Trim().ToLowerInvariant() is "true" or "1" or "yes";
+        if (!_logFileSet && ini.Get("log_file") is string lf)
+            LogFile = lf;
     }
 
     static RunMode ParseMode(string s)
@@ -671,6 +958,9 @@ internal sealed class AppArgs
             "  --output      <папка>      Базовая папка для файлов    (по умолчанию: rfm_data)\n" +
             "  --timeout     <секунды>    Таймаут HTTP                (по умолчанию: 60)\n" +
             "  --fes         <файл>       XML-файл ФЭС для отправки\n" +
+            "  --mchd        <файлы>      МЧД-файлы (через запятую) для отправки с ФЭС\n" +
+            "  --log         <файл>       Файл журнала (дублирует вывод в файл)\n" +
+            "  --save-requests            Сохранять тела запросов в *_request.json\n" +
             "  --list-certs               Показать сертификаты и выйти\n" +
             "  --help                     Эта справка\n\n" +
             "Приоритет: ключи командной строки > config.ini > значения по умолчанию\n\n" +
@@ -680,7 +970,8 @@ internal sealed class AppArgs
             "  RfmDownloader.exe --mode prod                  (продуктовый, из config.ini)\n" +
             "  RfmDownloader.exe --config prod.ini            (отдельный ini для прода)\n" +
             "  RfmDownloader.exe --mode prod --output D:\\rfm  (прод + своя папка)\n" +
-            "  RfmDownloader.exe --fes message.xml            (отправить ФЭС)"
+            "  RfmDownloader.exe --fes message.xml            (отправить ФЭС)\n" +
+            "  RfmDownloader.exe --fes msg.xml --mchd m1.xml,m2.xml (ФЭС с МЧД)"
         );
     }
 }

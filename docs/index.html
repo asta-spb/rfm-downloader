@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Электронный сервис "Сервисный концентратор Росфинмониторинга" - Документация</title>
+<style>
+  :root { --bg: #fff; --fg: #1a1a1a; --accent: #1a56db; --border: #d1d5db; --code-bg: #f3f4f6; --nav-bg: #f9fafb; --section-bg: #fafafa; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--fg); background: var(--bg); line-height: 1.6; max-width: 960px; margin: 0 auto; padding: 1rem 2rem 4rem; }
+  nav#toc { background: var(--nav-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 2rem; }
+  nav#toc h2 { font-size: 1.25rem; margin-bottom: 0.75rem; }
+  nav#toc ul { list-style: none; padding-left: 0; }
+  nav#toc ul ul { padding-left: 1.25rem; }
+  nav#toc ul ul ul { padding-left: 1.25rem; }
+  nav#toc li { margin: 0.2rem 0; }
+  nav#toc a { color: var(--accent); text-decoration: none; }
+  nav#toc a:hover { text-decoration: underline; }
+  nav#toc .stub { color: #9ca3af; font-style: italic; }
+  article { margin-bottom: 3rem; }
+  article + article { border-top: 2px solid var(--border); padding-top: 2rem; }
+  section { margin: 1rem 0; }
+  h1 { font-size: 1.75rem; margin: 1.5rem 0 1rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
+  h2 { font-size: 1.35rem; margin: 1.25rem 0 0.75rem; color: #374151; }
+  h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; color: #4b5563; }
+  h4 { font-size: 1rem; margin: 0.75rem 0 0.5rem; color: #6b7280; }
+  p { margin: 0.5rem 0; }
+  table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  code, .code { font-family: "Cascadia Code", "Fira Code", monospace; background: var(--code-bg); padding: 0.15em 0.35em; border-radius: 3px; font-size: 0.88em; }
+  pre { background: var(--code-bg); padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 0.75rem 0; font-size: 0.88rem; line-height: 1.5; }
+  .method-card { background: var(--section-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem; margin: 1rem 0; }
+  .method-card .label { font-weight: 600; display: inline-block; min-width: 140px; }
+  .note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 0.5rem 1rem; margin: 0.75rem 0; border-radius: 0 4px 4px 0; }
+  .back-to-top { display: inline-block; margin-top: 0.5rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
+  .back-to-top:hover { text-decoration: underline; }
+  .meta { color: #6b7280; font-size: 0.85rem; margin-bottom: 1rem; }
+  ol.methods { padding-left: 1.5rem; }
+  ol.methods > li { margin: 0.75rem 0; }
+  .warning { font-weight: 700; font-style: italic; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+<h1 id="top">Электронный сервис "Сервисный концентратор Росфинмониторинга"</h1>
+<p class="meta">Версия документа: 1.2 | Последнее обновление: 28.08.2025</p>
+</header>
+
+<!-- ========================== ОГЛАВЛЕНИЕ ========================== -->
+<nav id="toc">
+<h2>Оглавление</h2>
+<ul>
+  <li><a href="#sec-1">1. Общие сведения</a>
+    <ul>
+      <li><a href="#sec-1-1">1.1. Описание электронного сервиса</a></li>
+    </ul>
+  </li>
+  <li><a href="#sec-2">2. Операции (методы) электронного сервиса</a></li>
+  <li><a href="#sec-3">3. Руководство пользователя</a>
+    <ul>
+      <li><a href="#sec-3-1">3.1. Варианты значений поля "Обязательность"</a></li>
+      <li><a href="#sec-3-2">3.2. Установление https-соединения</a></li>
+      <li><a href="#sec-3-3">3.3. Тестовые методы</a>
+        <ul>
+          <li><a href="#sec-3-3-auth">3.3.1. Авторизация (test-contur/authenticate)</a></li>
+          <li><a href="#sec-3-3-catalogs">3.3.2. Перечни</a></li>
+          <li><a href="#sec-3-3-fes">3.3.3. Формализованные электронные сообщения</a></li>
+        </ul>
+      </li>
+      <li><a href="#sec-3-4">3.4. Методы в штатном режиме</a>
+        <ul>
+          <li><a href="#sec-3-4-auth">3.4.1. Авторизация (authenticate)</a></li>
+          <li><a href="#sec-3-4-catalogs">3.4.2. Перечни</a></li>
+          <li><a href="#sec-3-4-fes">3.4.3. Формализованные электронные сообщения</a></li>
+        </ul>
+      </li>
+      <li><a href="#sec-3-5">3.5. Примеры запросов и ответов</a>
+        <ul>
+          <li><a href="#ex-test-auth">3.5.1. test-contur/authenticate</a></li>
+          <li><a href="#ex-test-te2-catalog">3.5.2. test-contur/suspect-catalogs/current-te2-catalog</a></li>
+          <li><a href="#ex-test-te2-file">3.5.3. test-contur/suspect-catalogs/current-te2-file</a></li>
+          <li><a href="#ex-test-mvk-catalog">3.5.4. test-contur/suspect-catalogs/current-mvk-catalog</a></li>
+          <li><a href="#ex-test-mvk-file">3.5.5. test-contur/suspect-catalogs/current-mvk-file-zip</a></li>
+          <li><a href="#ex-test-fes-send">3.5.6. test-contur/formalized-message/send</a></li>
+          <li><a href="#ex-test-fes-send-mchd">3.5.7. test-contur/formalized-message/send-with-mchd</a></li>
+          <li><a href="#ex-test-fes-status">3.5.8. test-contur/formalized-message/check-status</a></li>
+          <li><a href="#ex-test-fes-ticket">3.5.9. test-contur/formalized-message/get-ticket</a></li>
+          <li><a href="#ex-prod-auth">3.5.10. authenticate</a></li>
+          <li><a href="#ex-prod-te2-catalog">3.5.11. suspect-catalogs/current-te2-catalog</a></li>
+          <li><a href="#ex-prod-te2-file">3.5.12. suspect-catalogs/current-te2-file</a></li>
+          <li><a href="#ex-prod-te21-catalog">3.5.13. suspect-catalogs/current-te21-catalog</a></li>
+          <li><a href="#ex-prod-te21-file">3.5.14. suspect-catalogs/current-te21-file</a></li>
+          <li><a href="#ex-prod-mvk-catalog">3.5.15. suspect-catalogs/current-mvk-catalog</a></li>
+          <li><a href="#ex-prod-mvk-file">3.5.16. suspect-catalogs/current-mvk-file-zip</a></li>
+          <li><a href="#ex-prod-fes-send">3.5.17. formalized-message/send</a></li>
+          <li><a href="#ex-prod-fes-status">3.5.18. formalized-message/check-status</a></li>
+          <li><a href="#ex-prod-fes-ticket">3.5.19. formalized-message/get-ticket</a></li>
+          <li><a href="#ex-prod-un-catalog">3.5.20. suspect-catalogs/current-un-catalog</a></li>
+          <li><a href="#ex-prod-un-catalog-rus">3.5.21. suspect-catalogs/current-un-catalog-rus</a></li>
+          <li><a href="#ex-prod-un-file">3.5.22. suspect-catalogs/current-un-file</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><a href="#sec-4">4. Получение доступа к методам</a>
+    <ul>
+      <li><a href="#sec-4-1">4.1. Порядок получения доступа к тестовым методам</a></li>
+      <li><a href="#sec-4-2">4.2. Порядок получения доступа к продуктивным методам</a></li>
+    </ul>
+  </li>
+  <li><a href="#appendix-1">Приложение 1. Заявка на получение доступа</a></li>
+</ul>
+</nav>
+
+<!-- ========================== РАЗДЕЛ 1 ========================== -->
+<article id="sec-1">
+<h1>1. Общие сведения</h1>
+
+<table>
+<caption>Табл. 1. Список изменений по электронному сервису</caption>
+<thead><tr><th>Версия</th><th>Дата</th><th>Автор</th><th>Изменения</th></tr></thead>
+<tbody>
+<tr><td>1.1</td><td>26.06.2025</td><td>&mdash;</td><td>Первая версия документа</td></tr>
+<tr><td>1.2</td><td>28.08.2025</td><td>&mdash;</td><td>Добавлены методы для передачи ФЭС с МЧД и скачивания русскоязычного Перечня ООН</td></tr>
+</tbody>
+</table>
+
+<section id="sec-1-1">
+<h2>1.1. Описание электронного сервиса</h2>
+<p>Электронный сервис &laquo;Сервисный концентратор Росфинмониторинга&raquo; предоставляет возможность пользователям Личного кабинета на официальном сайте Росфинмониторинга направлять в Федеральную службу по финансовому мониторингу и получать сведения в рамках существующих НПА.</p>
+
+<table>
+<caption>Табл. 2. Описание электронного сервиса</caption>
+<tbody>
+<tr><th>Наименование</th><td>Электронный сервис &laquo;Сервисный концентратор Росфинмониторинга&raquo;</td></tr>
+<tr><th>Назначение</th><td>Единая точка входа для направления сведений в Росфинмониторинг</td></tr>
+<tr><th>Поставщик</th><td>Федеральная служба по финансовому мониторингу</td></tr>
+<tr><th>Потребитель</th><td>Пользователь Личного кабинета Росфинмониторинга</td></tr>
+<tr><th>Режим</th><td>Асинхронный</td></tr>
+<tr><th>Адрес</th><td><code>https://portal.fedsfm.ru:8081/Services/fedsfm-service</code></td></tr>
+</tbody>
+</table>
+</section>
+<a class="back-to-top" href="#toc">&uarr; К оглавлению</a>
+</article>
+
+<!-- ========================== РАЗДЕЛ 2 ========================== -->
+<article id="sec-2">
+<h1>2. Операции (методы) электронного сервиса</h1>
+<p>Электронный сервис представляет собой набор операций (методов), приведённых в таблице ниже.</p>
+
+<table>
+<caption>Табл. 3. Методы электронного сервиса</caption>
+<thead><tr><th>Метод</th><th>Назначение</th></tr></thead>
+<tbody>
+<tr><td colspan="2"><strong>Тестовые методы</strong></td></tr>
+<tr><td><code>test-contur/authenticate</code><br>Авторизация</td><td>Тестовый метод возвращает JWT-токен сессии (авторизации)</td></tr>
+<tr><td><code>test-contur/suspect-catalogs/current-te2-catalog</code><br>Предоставление информации об актуальном Перечне ТЭ</td><td>Возвращает информацию об актуальном Перечне организаций и физических лиц, причастных к экстремистской деятельности или терроризму, с уникальным идентификатором файла</td></tr>
+<tr><td><code>test-contur/suspect-catalogs/current-te2-file</code><br>Предоставление zip-файла Перечня ТЭ</td><td>По уникальному идентификатору возвращает zip-файл с Перечнем ТЭ</td></tr>
+<tr><td><code>test-contur/suspect-catalogs/current-mvk-catalog</code><br>Предоставление информации об актуальном Перечне МВК</td><td>Возвращает информацию об актуальном Перечне лиц, в отношении которых действует решение Комиссии о замораживании денежных средств</td></tr>
+<tr><td><code>test-contur/suspect-catalogs/current-mvk-file-zip</code><br>Предоставление zip-файла Перечня МВК</td><td>По уникальному идентификатору возвращает zip-файл с Перечнем МВК</td></tr>
+<tr><td><code>test-contur/formalized-message/send</code><br>Отправка ФЭС на портал ФСФМ</td><td>Отправляет ФЭС на портал ФСФМ; возвращает уникальный идентификатор регистрации в ЕИС ФСФМ</td></tr>
+<tr><td><code>test-contur/formalized-message/send-with-mchd</code><br>Отправка ФЭС на портал ФСФМ с МЧД</td><td>Отправляет ФЭС с МЧД на портал ФСФМ; возвращает уникальный идентификатор регистрации в ЕИС ФСФМ</td></tr>
+<tr><td><code>test-contur/formalized-message/check-status</code><br>Предоставление информации о текущем статусе ФЭС</td><td>По уникальному идентификатору возвращает информацию о текущем статусе ФЭС</td></tr>
+<tr><td><code>test-contur/formalized-message/get-ticket</code><br>Предоставление файла квитанции ФЭС</td><td>По уникальному идентификатору возвращает файл квитанции ФЭС, если квитанция сформирована</td></tr>
+
+<tr><td colspan="2"><strong>Методы в штатном режиме</strong></td></tr>
+<tr><td><code>authenticate</code><br>Авторизация</td><td>Возвращает JWT-токен сессии (авторизации)</td></tr>
+<tr><td><code>suspect-catalogs/current-te21-catalog</code><br>Получение информации об актуальном Перечне ТЭ (версия 2.1)</td><td>Возвращает информацию об актуальном Перечне ТЭ с уникальным идентификатором файла. Для версии 2.1</td></tr>
+<tr><td><code>suspect-catalogs/current-te21-file</code><br>Получение zip-файла Перечня ТЭ (версия 2.1)</td><td>По идентификатору возвращает файл Перечня ТЭ. Для версии 2.1</td></tr>
+<tr><td><code>suspect-catalogs/current-mvk-catalog</code><br>Предоставление информации об актуальном Перечне МВК</td><td>Возвращает информацию об актуальном Перечне лиц, в отношении которых действует решение Комиссии о замораживании денежных средств</td></tr>
+<tr><td><code>suspect-catalogs/current-mvk-file-zip</code><br>Предоставление zip-файла Перечня МВК</td><td>По идентификатору возвращает zip-файл с Перечнем МВК</td></tr>
+<tr><td><code>suspect-catalogs/current-un-catalog</code><br>Получение информации об актуальном Перечне ООН</td><td>Возвращает информацию об актуальном Перечне организаций и физических лиц, связанных с терроризмом или с распространением ОМУ, по решениям СБ ООН</td></tr>
+<tr><td><code>suspect-catalogs/current-un-catalog-rus</code><br>Получение информации об актуальном Перечне ООН (русскоязычная версия)</td><td>Возвращает информацию об актуальной русскоязычной версии сводного перечня ООН</td></tr>
+<tr><td><code>suspect-catalogs/current-un-file</code><br>Получение xml-файла Перечня ООН</td><td>По идентификатору возвращает xml-файл Перечня ООН</td></tr>
+<tr><td><code>formalized-message/send</code><br>Отправка ФЭС на портал ФСФМ</td><td>Отправляет ФЭС на портал ФСФМ; возвращает уникальный идентификатор регистрации в ЕИС ФСФМ</td></tr>
+<tr><td><code>formalized-message/send-with-mchd</code><br>Отправка ФЭС на портал ФСФМ с МЧД</td><td>Отправляет ФЭС с МЧД на портал ФСФМ; возвращает уникальный идентификатор регистрации в ЕИС ФСФМ</td></tr>
+<tr><td><code>formalized-message/check-status</code><br>Предоставление информации о текущем статусе ФЭС</td><td>По идентификатору возвращает текущий статус ФЭС</td></tr>
+<tr><td><code>formalized-message/get-ticket</code><br>Предоставление файла квитанции ФЭС</td><td>По идентификатору возвращает файл квитанции ФЭС, если она сформирована</td></tr>
+</tbody>
+</table>
+<a class="back-to-top" href="#toc">&uarr; К оглавлению</a>
+</article>
+
+<!-- ========================== РАЗДЕЛ 3 ========================== -->
+<article id="sec-3">
+<h1>3. Руководство пользователя</h1>
+
+<!-- 3.1 -->
+<section id="sec-3-1">
+<h2>3.1. Варианты значений поля "Обязательность"</h2>
+<p>Требования к наличию и заполнению полей:</p>
+<ul>
+<li><strong>О</strong> &mdash; обязательный элемент (наличие и заполнение)</li>
+<li><strong>Н</strong> &mdash; необязательный элемент</li>
+<li><strong>УО</strong> &mdash; условно-обязательный элемент. Условия указаны в поле &laquo;Особенность&raquo;</li>
+</ul>
+<p class="warning">Незаполнение обязательных полей не допускается!</p>
+</section>
+
+<!-- 3.2 -->
+<section id="sec-3-2">
+<h2>3.2. Установление https-соединения</h2>
+<p>При вызове любого метода сервиса для установления защищённого по ГОСТ https-соединения необходимо передавать сведения о сертификате инициатора запроса (тот же сертификат, который используется для входа в защищённый Личный кабинет на официальном сайте Росфинмониторинга).</p>
+<p>Например, на языке программирования C# это будет выглядеть следующим образом:</p>
+<p><em>(см. изображение media/image1.png в исходном документе)</em></p>
+</section>
+
+<!-- 3.3 Тестовые методы -->
+<section id="sec-3-3">
+<h2>3.3. Тестовые методы</h2>
+
+<!-- 3.3.1 Авторизация -->
+<section id="sec-3-3-auth">
+<h3>3.3.1. Авторизация</h3>
+<div class="method-card">
+<p><span class="label">Метод сервиса:</span> <code>test-contur/authenticate</code></p>
+<p><span class="label">Описание:</span> Предоставление JSON Web Token (JWT-токен) сессии (авторизации) для вызова остальных методов сервиса в тестовом режиме.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/json</code></p>
+</div>
+
+<table>
+<caption>Табл. 4. Параметры запроса</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>userName</td><td>string</td><td>&mdash;</td><td>О</td><td>Логин пользователя личного кабинета</td></tr>
+<tr><td>password</td><td>string</td><td>&mdash;</td><td>О</td><td>Пароль пользователя личного кабинета</td></tr>
+</tbody>
+</table>
+
+<table>
+<caption>Табл. 5. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>value</td><td>Список элементов типа Value</td><td>&mdash;</td><td>O</td><td>Данные о сеансе</td></tr>
+<tr><td>success</td><td>bool</td><td>Значение true означает, что запрос выполнен успешно</td><td>O</td><td>Результат</td></tr>
+<tr><td>error</td><td>Список элементов типа Error</td><td>Присутствует если success = false</td><td>УО</td><td>Список ошибок</td></tr>
+<tr><td>errors</td><td>string</td><td>&mdash;</td><td>О</td><td>Ошибки</td></tr>
+<tr><td>hasErrors</td><td>string</td><td>&mdash;</td><td>О</td><td>Наличие ошибок</td></tr>
+<tr><td colspan="5"><strong>Блок служебных полей (Value)</strong></td></tr>
+<tr><td>currentUser</td><td>Список элементов типа currentUser</td><td>&mdash;</td><td>О</td><td>Данные пользователя личного кабинета</td></tr>
+<tr><td>access_token</td><td>string</td><td>&mdash;</td><td>О</td><td>Токен доступа</td></tr>
+<tr><td>refreshToken</td><td>string</td><td>&mdash;</td><td>О</td><td>Обновлённый токен</td></tr>
+<tr><td colspan="5"><strong>Блок служебных полей (currentUser)</strong></td></tr>
+<tr><td>id</td><td>string</td><td>&mdash;</td><td>O</td><td>Идентификатор пользователя личного кабинета</td></tr>
+<tr><td>userName</td><td>string</td><td>&mdash;</td><td>О</td><td>Логин</td></tr>
+<tr><td>kbShortName</td><td>string</td><td>&mdash;</td><td>О</td><td>Имя пользователя личного кабинета</td></tr>
+<tr><td>kbLoginType</td><td>string</td><td>Всегда устанавливается значение &laquo;3&raquo;</td><td>О</td><td>Тип логина</td></tr>
+<tr><td>IsAuthenticated</td><td>string</td><td>&mdash;</td><td>О</td><td>Статус авторизации</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+Для доступа к другим методам сервиса необходимо поместить в http-запрос заголовок <code>Authorization</code> и указать в нём тип токена (<code>bearer</code>) доступа и токен доступа через пробел.
+</div>
+</section>
+
+<!-- 3.3.2 Перечни -->
+<section id="sec-3-3-catalogs">
+<h3>3.3.2. Перечни</h3>
+
+<h4 id="m-test-te2-catalog">Метод 2: test-contur/suspect-catalogs/current-te2-catalog</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение информации об актуальном Перечне организаций и физических лиц, причастных к экстремистской деятельности или терроризму (тестовый режим).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+</div>
+<table>
+<caption>Табл. 6. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>idTerroristCatalog</td><td>guid</td><td>&mdash;</td><td>О</td><td>Id Перечня</td></tr>
+<tr><td>terroristCatalogNumber</td><td>string</td><td>&mdash;</td><td>О</td><td>Номер Перечня</td></tr>
+<tr><td>terroristCatalogDate</td><td>int</td><td>&mdash;</td><td>О</td><td>Дата создания Перечня</td></tr>
+<tr><td>isActive</td><td>string</td><td>&mdash;</td><td>О</td><td>Статус Перечня</td></tr>
+<tr><td>idDbf</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор dbf-файла с Перечнем</td></tr>
+<tr><td>idDoc</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор doc-файла с Перечнем</td></tr>
+<tr><td>idXml</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор xml-файла с Перечнем</td></tr>
+</tbody>
+</table>
+
+<h4 id="m-test-te2-file">Метод 3: test-contur/suspect-catalogs/current-te2-file</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение zip-файла Перечня ТЭ (тестовый режим).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/x-www-form-urlencoded</code></p>
+</div>
+<p><strong>Структура запроса:</strong> <code>id</code> &mdash; идентификатор, полученный из метода <a href="#m-test-te2-catalog">current-te2-catalog</a></p>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/octet-stream</code> &mdash; бинарные данные запрошенного Перечня ТЭ.</p>
+
+<h4 id="m-test-mvk-catalog">Метод 4: test-contur/suspect-catalogs/current-mvk-catalog</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение информации об актуальном списке лиц, в отношении которых действует решение Комиссии о замораживании (блокировании) денежных средств (тестовый режим).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+</div>
+<table>
+<caption>Табл. 7. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>date</td><td>guid</td><td>&mdash;</td><td>О</td><td>Дата создания Списка МВК</td></tr>
+<tr><td>isActive</td><td>string</td><td>&mdash;</td><td>О</td><td>Статус Списка МВК</td></tr>
+<tr><td>idXml</td><td>int</td><td>&mdash;</td><td>О</td><td>Идентификатор xml-файла со Списком МВК</td></tr>
+</tbody>
+</table>
+
+<h4 id="m-test-mvk-file">Метод 5: test-contur/suspect-catalogs/current-mvk-file-zip</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение zip-файла списка МВК (тестовый режим).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/x-www-form-urlencoded</code></p>
+</div>
+<p><strong>Структура запроса:</strong> <code>id</code> &mdash; идентификатор, полученный из метода <a href="#m-test-mvk-catalog">current-mvk-catalog</a></p>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/octet-stream</code> &mdash; бинарные данные запрошенного списка МВК.</p>
+
+<h4 id="m-test-un-catalog">Метод 6: suspect-catalogs-current-un-catalog</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение информации об актуальной версии сводного перечня ООН (англоязычная версия).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p>Параметры запроса отсутствуют.</p>
+</div>
+<table>
+<caption>Табл. 8. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>date</td><td>DateTime</td><td>&mdash;</td><td>О</td><td>Дата создания Перечня ТЭ</td></tr>
+<tr><td>isActive</td><td>Bool</td><td>&mdash;</td><td>О</td><td>Статус Перечня ТЭ</td></tr>
+<tr><td>IdXml</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор файла с Перечнем ТЭ</td></tr>
+</tbody>
+</table>
+<p>Загрузка справочника выполняется методом <a href="#m-test-un-file">suspect-catalogs-current-un-file</a></p>
+
+<h4 id="m-test-un-catalog-rus">Метод 7: suspect-catalogs-current-un-catalog-rus</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение информации об актуальной версии сводного перечня ООН (русскоязычная версия).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p>Параметры запроса отсутствуют.</p>
+</div>
+<table>
+<caption>Табл. 9. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>date</td><td>DateTime</td><td>&mdash;</td><td>О</td><td>Дата создания Перечня ТЭ</td></tr>
+<tr><td>isActive</td><td>Bool</td><td>&mdash;</td><td>О</td><td>Статус Перечня ТЭ</td></tr>
+<tr><td>IdXml</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор файла с Перечнем ТЭ</td></tr>
+</tbody>
+</table>
+<p>Загрузка справочника выполняется методом <a href="#m-test-un-file">suspect-catalogs-current-un-file</a></p>
+
+<h4 id="m-test-un-file">Метод 8: suspect-catalogs-current-un-file</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение xml-файла актуальной версии сводного перечня ООН.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/x-www-form-urlencoded</code></p>
+</div>
+<table>
+<caption>Табл. 10. Параметры запроса</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>id</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор, полученный из метода suspect-catalogs/current-un-catalog</td></tr>
+</tbody>
+</table>
+<p><strong>Структура ответа:</strong> Бинарные данные (xml-файл) запрошенного Перечня ООН.</p>
+</section>
+
+<!-- 3.3.3 ФЭС -->
+<section id="sec-3-3-fes">
+<h3>3.3.3. Формализованные электронные сообщения</h3>
+
+<h4 id="m-test-fes-send">Метод 9: test-contur/formalized-message/send</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Отправка ФЭС на портал ФСФМ (тестовый режим). При удачном выполнении запроса пользователь получает уникальный идентификатор, под которым ФЭС зарегистрирован в ЕИС ФСФМ.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>multipart/form-data</code></p>
+</div>
+<p><strong>Структура запроса:</strong> <code>{ file: binary, sign: binary }</code></p>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/json</code></p>
+<table>
+<caption>Табл. 11. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>IdFormalizedMessage</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в ЕИС ФСФМ</td></tr>
+<tr><td>IdExternal</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в системе клиента</td></tr>
+<tr><td>IdFormalizedMessageStatus</td><td>int</td><td>&mdash;</td><td>О</td><td>Идентификатор статуса ФЭС</td></tr>
+<tr><td>FormalizedMessageStatusName</td><td>string</td><td>&mdash;</td><td>О</td><td>Наименование статуса ФЭС</td></tr>
+<tr><td>Note</td><td>string</td><td>Заполняется при наличии</td><td>УО</td><td>Примечание</td></tr>
+</tbody>
+</table>
+
+<h4 id="m-test-fes-send-mchd">Метод 10: test-contur/formalized-message/send-with-mchd</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Отправка ФЭС с МЧД на портал ФСФМ (тестовый режим).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>multipart/form-data</code></p>
+</div>
+<p><strong>Структура запроса:</strong> <code>{ file: binary, sign: binary, mchd: list&lt;binary&gt;, mchdSign: list&lt;binary&gt; }</code></p>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/json</code> &mdash; параметры аналогичны <a href="#m-test-fes-send">методу send</a>.</p>
+
+<h4 id="m-test-fes-status">Метод 11: test-contur/formalized-message/check-status</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> По уникальному идентификатору возвращает информацию о текущем статусе ФЭС (тестовый режим).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/json</code></p>
+</div>
+<table>
+<caption>Табл. 13. Параметры запроса</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>IdFormalizedMessage</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в ЕИС ФСФМ</td></tr>
+<tr><td>IdExternal</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в системе клиента</td></tr>
+</tbody>
+</table>
+<p><strong>Параметры ответа:</strong> аналогичны <a href="#m-test-fes-send">методу send</a>.</p>
+
+<h4 id="m-test-fes-ticket">Метод 12: test-contur/formalized-message/get-ticket</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> По уникальному идентификатору возвращает файл квитанции ФЭС, если квитанция сформирована (тестовый режим).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/json</code></p>
+</div>
+<table>
+<caption>Табл. 15. Параметры запроса</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>IdFormalizedMessage</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в ЕИС ФСФМ</td></tr>
+<tr><td>IdExternal</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в системе клиента</td></tr>
+</tbody>
+</table>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/octet-stream</code> &mdash; бинарные данные файла квитанции ФЭС.</p>
+</section>
+</section>
+
+<!-- 3.4 Методы в штатном режиме -->
+<section id="sec-3-4">
+<h2>3.4. Методы в штатном режиме</h2>
+
+<!-- 3.4.1 Авторизация -->
+<section id="sec-3-4-auth">
+<h3>3.4.1. Авторизация</h3>
+<div class="method-card">
+<p><span class="label">Метод сервиса:</span> <code>authenticate</code></p>
+<p><span class="label">Описание:</span> Предоставление JSON Web Token (JWT-токен) сессии (авторизации) для вызова остальных методов сервиса.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/json</code></p>
+</div>
+
+<table>
+<caption>Табл. 16. Параметры запроса</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>userName</td><td>string</td><td>&mdash;</td><td>О</td><td>Логин пользователя личного кабинета</td></tr>
+<tr><td>password</td><td>string</td><td>&mdash;</td><td>О</td><td>Пароль пользователя личного кабинета</td></tr>
+</tbody>
+</table>
+
+<table>
+<caption>Табл. 17. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>value</td><td>Список элементов типа Value</td><td>&mdash;</td><td>O</td><td>Данные о сеансе</td></tr>
+<tr><td>success</td><td>bool</td><td>Значение true означает, что запрос выполнен успешно</td><td>O</td><td>Результат</td></tr>
+<tr><td>error</td><td>Список элементов типа Error</td><td>Присутствует если success = false</td><td>УО</td><td>Список ошибок</td></tr>
+<tr><td>errors</td><td>string</td><td>&mdash;</td><td>О</td><td>Ошибки</td></tr>
+<tr><td>hasErrors</td><td>string</td><td>&mdash;</td><td>О</td><td>Наличие ошибок</td></tr>
+<tr><td colspan="5"><strong>Блок служебных полей (Value)</strong></td></tr>
+<tr><td>currentUser</td><td>Список элементов типа currentUser</td><td>&mdash;</td><td>О</td><td>Данные пользователя личного кабинета</td></tr>
+<tr><td>access_token</td><td>string</td><td>&mdash;</td><td>О</td><td>Токен доступа</td></tr>
+<tr><td>refreshToken</td><td>string</td><td>&mdash;</td><td>О</td><td>Обновлённый токен</td></tr>
+<tr><td colspan="5"><strong>Блок служебных полей (currentUser)</strong></td></tr>
+<tr><td>id</td><td>string</td><td>&mdash;</td><td>O</td><td>Идентификатор пользователя личного кабинета</td></tr>
+<tr><td>userName</td><td>string</td><td>&mdash;</td><td>О</td><td>Логин</td></tr>
+<tr><td>kbShortName</td><td>string</td><td>&mdash;</td><td>О</td><td>Имя пользователя личного кабинета</td></tr>
+<tr><td>kbLoginType</td><td>string</td><td>Всегда устанавливается значение &laquo;3&raquo;</td><td>О</td><td>Тип логина</td></tr>
+<tr><td>IsAuthenticated</td><td>string</td><td>&mdash;</td><td>О</td><td>Статус авторизации</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+Для доступа к другим методам сервиса необходимо поместить в http-запрос заголовок <code>Authorization</code> и указать в нём тип токена (<code>bearer</code>) доступа и токен доступа через пробел.
+</div>
+</section>
+
+<!-- 3.4.2 Перечни -->
+<section id="sec-3-4-catalogs">
+<h3>3.4.2. Перечни</h3>
+
+<h4 id="m-prod-te21-catalog">Метод 1: suspect-catalogs/current-te21-catalog</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение информации об актуальном Перечне ТЭ. Для версии 2.1.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+</div>
+<table>
+<caption>Табл. 20. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>Date</td><td>DateTime</td><td>&mdash;</td><td>О</td><td>Дата создания Перечня ТЭ (версия 2.1)</td></tr>
+<tr><td>IsActive</td><td>Bool</td><td>&mdash;</td><td>О</td><td>Статус Перечня ТЭ (версия 2.1)</td></tr>
+<tr><td>IdXml</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор файла с Перечнем ТЭ (версия 2.1)</td></tr>
+</tbody>
+</table>
+
+<h4 id="m-prod-te21-file">Метод 2: suspect-catalogs/current-te21-file</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение zip-файла Перечня ТЭ. Для версии 2.1.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/x-www-form-urlencoded</code></p>
+</div>
+<p><strong>Структура запроса:</strong> <code>id</code> &mdash; идентификатор, полученный из метода <a href="#m-prod-te21-catalog">current-te21-catalog</a></p>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/zip</code> &mdash; zip-архив Перечня ТЭ (версия 2.1).</p>
+
+<h4 id="m-prod-mvk-catalog">Метод 3: suspect-catalogs/current-mvk-catalog</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение информации об актуальном списке лиц, в отношении которых действует решение Комиссии о замораживании (блокировании) денежных средств.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+</div>
+<table>
+<caption>Табл. 19. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>date</td><td>guid</td><td>&mdash;</td><td>О</td><td>Дата создания Списка МВК</td></tr>
+<tr><td>isActive</td><td>string</td><td>&mdash;</td><td>О</td><td>Статус Списка МВК</td></tr>
+<tr><td>idXml</td><td>int</td><td>&mdash;</td><td>О</td><td>Идентификатор xml-файла со Списком МВК</td></tr>
+</tbody>
+</table>
+
+<h4 id="m-prod-mvk-file">Метод 4: suspect-catalogs/current-mvk-file-zip</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение zip-файла списка МВК.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/x-www-form-urlencoded</code></p>
+</div>
+<p><strong>Структура запроса:</strong> <code>id</code> &mdash; идентификатор, полученный из метода <a href="#m-prod-mvk-catalog">current-mvk-catalog</a></p>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/octet-stream</code> &mdash; бинарные данные списка МВК.</p>
+
+<h4 id="m-prod-un-catalog">Метод 5: suspect-catalogs-current-un-catalog</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение информации об актуальной версии сводного перечня ООН (англоязычная версия).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p>Параметры запроса отсутствуют.</p>
+</div>
+<table>
+<caption>Табл. 20. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>date</td><td>DateTime</td><td>&mdash;</td><td>О</td><td>Дата создания Перечня</td></tr>
+<tr><td>isActive</td><td>Bool</td><td>&mdash;</td><td>О</td><td>Статус Перечня</td></tr>
+<tr><td>IdXml</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор файла с Перечнем</td></tr>
+</tbody>
+</table>
+
+<h4 id="m-prod-un-catalog-rus">Метод 6: suspect-catalogs-current-un-catalog-rus</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение информации об актуальной версии сводного перечня ООН (русскоязычная версия).</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p>Параметры запроса отсутствуют.</p>
+</div>
+<table>
+<caption>Табл. 21. Параметры ответа</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>date</td><td>DateTime</td><td>&mdash;</td><td>О</td><td>Дата создания Перечня</td></tr>
+<tr><td>isActive</td><td>Bool</td><td>&mdash;</td><td>О</td><td>Статус Перечня</td></tr>
+<tr><td>IdXml</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор файла с Перечнем</td></tr>
+</tbody>
+</table>
+
+<h4 id="m-prod-un-file">Метод 7: suspect-catalogs-current-un-file</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Получение xml-файла актуальной версии сводного перечня ООН.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/x-www-form-urlencoded</code></p>
+</div>
+<table>
+<caption>Табл. 22. Параметры запроса</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>id</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор, полученный из метода suspect-catalogs/current-un-catalog</td></tr>
+<tr><td>to_encode</td><td>boolean</td><td>&mdash;</td><td>Н</td><td>Признак необходимости кодировки в base64. По умолчанию (false) возвращается бинарный массив.</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- 3.4.3 ФЭС -->
+<section id="sec-3-4-fes">
+<h3>3.4.3. Формализованные электронные сообщения</h3>
+
+<h4 id="m-prod-fes-send">Метод 8: formalized-message/send</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Отправка ФЭС на портал ФСФМ. При удачном выполнении пользователь получает уникальный идентификатор регистрации в ЕИС ФСФМ.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>multipart/form-data</code></p>
+</div>
+<p><strong>Структура запроса:</strong> <code>{ file: binary, sign: binary }</code></p>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/json</code> &mdash; параметры аналогичны <a href="#m-test-fes-send">тестовому методу send</a>.</p>
+
+<h4 id="m-prod-fes-send-mchd">Метод 9: formalized-message/send-with-mchd</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> Отправка ФЭС с МЧД на портал ФСФМ.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>multipart/form-data</code></p>
+</div>
+<p><strong>Структура запроса:</strong> <code>{ file: binary, sign: binary, mchd: list&lt;binary&gt;, mchdSign: list&lt;binary&gt; }</code></p>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/json</code> &mdash; параметры аналогичны <a href="#m-test-fes-send">тестовому методу send</a>.</p>
+
+<h4 id="m-prod-fes-status">Метод 10: formalized-message/check-status</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> По уникальному идентификатору возвращает текущий статус ФЭС.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/json</code></p>
+</div>
+<table>
+<caption>Табл. 25. Параметры запроса</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>IdFormalizedMessage</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в ЕИС ФСФМ</td></tr>
+<tr><td>IdExternal</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в системе клиента</td></tr>
+</tbody>
+</table>
+<p><strong>Параметры ответа:</strong> аналогичны <a href="#m-test-fes-send">методу send</a>.</p>
+
+<h4 id="m-prod-fes-ticket">Метод 11: formalized-message/get-ticket</h4>
+<div class="method-card">
+<p><span class="label">Описание:</span> По уникальному идентификатору возвращает файл квитанции ФЭС, если квитанция сформирована.</p>
+<p><span class="label">HTTP-метод:</span> POST</p>
+<p><span class="label">ContentType:</span> <code>application/json</code></p>
+</div>
+<table>
+<caption>Табл. 27. Параметры запроса</caption>
+<thead><tr><th>Наименование поля</th><th>Тип поля</th><th>Особенность</th><th>Обязательность</th><th>Описание</th></tr></thead>
+<tbody>
+<tr><td>IdFormalizedMessage</td><td>Guid</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в ЕИС ФСФМ</td></tr>
+<tr><td>IdExternal</td><td>string</td><td>&mdash;</td><td>О</td><td>Идентификатор ФЭС в системе клиента</td></tr>
+</tbody>
+</table>
+<p><strong>Структура ответа:</strong> ContentType: <code>application/octet-stream</code> &mdash; бинарные данные файла квитанции ФЭС.</p>
+</section>
+</section>
+
+<!-- 3.5 Примеры -->
+<section id="sec-3-5">
+<h2>3.5. Примеры запросов и ответов</h2>
+
+<!-- Тестовые примеры -->
+<h3 id="ex-test-auth">3.5.1. test-contur/authenticate</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{
+  "userName": "rfm",
+  "password": "XXX"
+}</pre>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "value": {
+    "currentUser": {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "userName": "rfm",
+      "kbShortName": null,
+      "kbLoginType": 3,
+      "isAuthenticated": false
+    },
+    "accessToken": "token",
+    "refreshToken": null
+  },
+  "success": false,
+  "error": null,
+  "errors": [],
+  "hasErrors": false
+}</pre>
+
+<h3 id="ex-test-te2-catalog">3.5.2. test-contur/suspect-catalogs/current-te2-catalog</h3>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "idTerroristCatalog": 1,
+  "terroristCatalogNumber": "",
+  "terroristCatalogDate": "2019-06-06T10:49:42.81507Z",
+  "isActive": true,
+  "idDbf": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "idDoc": "cf529a3f-f267-41a1-8a06-6199ab9c40d8",
+  "idXml": "6873176f-900f-42b4-8ff0-d1cf06905157"
+}</pre>
+
+<h3 id="ex-test-te2-file">3.5.3. test-contur/suspect-catalogs/current-te2-file</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{ "id": "efb2f08c-d31d-4091-a209-2b6776d405a0" }</pre>
+<p><strong>Ответ:</strong> <code>{... Binary data file content...}</code></p>
+
+<h3 id="ex-test-mvk-catalog">3.5.4. test-contur/suspect-catalogs/current-mvk-catalog</h3>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "date": "2019-06-06T10:49:42.83069Z",
+  "isActive": true,
+  "idXml": "e37648ca-1bd9-462b-b3d1-f6ebc8848e7e"
+}</pre>
+
+<h3 id="ex-test-mvk-file">3.5.5. test-contur/suspect-catalogs/current-mvk-file-zip</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{ "id": "e37648ca-1bd9-462b-b3d1-f6ebc8848e7e" }</pre>
+<p><strong>Ответ:</strong> <code>{... Binary data file content...}</code></p>
+
+<h3 id="ex-test-fes-send">3.5.6. test-contur/formalized-message/send</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{ "file": &lt;binary data&gt;, "sign": &lt;binary data&gt; }</pre>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId",
+  "IdFormalizedMessageStatus": 1,
+  "FormalizedMessageStatusName": "Отправлено",
+  "Note": "Примечание"
+}</pre>
+
+<h3 id="ex-test-fes-send-mchd">3.5.7. test-contur/formalized-message/send-with-mchd</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{
+  "file": &lt;binary data&gt;,
+  "sign": &lt;binary data&gt;,
+  "mchd": list&lt;binary data&gt;,
+  "mchdSign": list&lt;binary data&gt;
+}</pre>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId",
+  "IdFormalizedMessageStatus": 1,
+  "FormalizedMessageStatusName": "Отправлено",
+  "Note": "Примечание"
+}</pre>
+
+<h3 id="ex-test-fes-status">3.5.8. test-contur/formalized-message/check-status</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId"
+}</pre>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId",
+  "IdFormalizedMessageStatus": 3,
+  "FormalizedMessageStatusName": "Проверка ФЛК",
+  "Note": "Проверка ФЛК"
+}</pre>
+
+<h3 id="ex-test-fes-ticket">3.5.9. test-contur/formalized-message/get-ticket</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId"
+}</pre>
+<p><strong>Ответ:</strong> <code>&lt;binary data&gt;</code></p>
+
+<!-- Продуктивные примеры -->
+<h3 id="ex-prod-auth">3.5.10. authenticate</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{
+  "userName": "rfm",
+  "password": "XXX"
+}</pre>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "value": {
+    "currentUser": {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "userName": "rfm",
+      "kbShortName": null,
+      "kbLoginType": 3,
+      "isAuthenticated": false
+    },
+    "accessToken": "token",
+    "refreshToken": null
+  },
+  "success": false,
+  "error": null,
+  "errors": [],
+  "hasErrors": false
+}</pre>
+
+<h3 id="ex-prod-te2-catalog">3.5.11. suspect-catalogs/current-te2-catalog</h3>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "idTerroristCatalog": 1,
+  "terroristCatalogNumber": "",
+  "terroristCatalogDate": "2019-06-06T10:49:42.81507Z",
+  "isActive": true,
+  "idDbf": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "idDoc": "cf529a3f-f267-41a1-8a06-6199ab9c40d8",
+  "idXml": "6873176f-900f-42b4-8ff0-d1cf06905157"
+}</pre>
+
+<h3 id="ex-prod-te2-file">3.5.12. suspect-catalogs/current-te2-file</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{ "id": "efb2f08c-d31d-4091-a209-2b6776d405a0" }</pre>
+<p><strong>Ответ:</strong> <code>{... Binary data file content...}</code></p>
+
+<h3 id="ex-prod-te21-catalog">3.5.13. suspect-catalogs/current-te21-catalog</h3>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "date": "2019-06-06T10:49:42.81507Z",
+  "isActive": true,
+  "idXml": "6873176f-900f-42b4-8ff0-d1cf06905157"
+}</pre>
+
+<h3 id="ex-prod-te21-file">3.5.14. suspect-catalogs/current-te21-file</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{ "id": "6873176f-900f-42b4-8ff0-d1cf06905157" }</pre>
+<p><strong>Ответ:</strong> <code>{... Binary data file content...}</code></p>
+
+<h3 id="ex-prod-mvk-catalog">3.5.15. suspect-catalogs/current-mvk-catalog</h3>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "date": "2019-06-06T10:49:42.83069Z",
+  "isActive": true,
+  "idXml": "e37648ca-1bd9-462b-b3d1-f6ebc8848e7e"
+}</pre>
+
+<h3 id="ex-prod-mvk-file">3.5.16. suspect-catalogs/current-mvk-file-zip</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{ "id": "e37648ca-1bd9-462b-b3d1-f6ebc8848e7e" }</pre>
+<p><strong>Ответ:</strong> <code>{... Binary data file content...}</code></p>
+
+<h3 id="ex-prod-fes-send">3.5.17. formalized-message/send</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{ "file": &lt;binary data&gt;, "sign": &lt;binary data&gt; }</pre>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId",
+  "IdFormalizedMessageStatus": 1,
+  "FormalizedMessageStatusName": "Отправлено",
+  "Note": "Примечание"
+}</pre>
+
+<h3 id="ex-prod-fes-status">3.5.18. formalized-message/check-status</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId"
+}</pre>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId",
+  "IdFormalizedMessageStatus": 3,
+  "FormalizedMessageStatusName": "Проверка ФЛК",
+  "Note": "Проверка ФЛК"
+}</pre>
+
+<h3 id="ex-prod-fes-ticket">3.5.19. formalized-message/get-ticket</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{
+  "IdFormalizedMessage": "efb2f08c-d31d-4091-a209-2b6776d405a0",
+  "IdExternal": "externalId"
+}</pre>
+<p><strong>Ответ:</strong> <code>&lt;binary data&gt;</code></p>
+
+<h3 id="ex-prod-un-catalog">3.5.20. suspect-catalogs/current-un-catalog</h3>
+<p><strong>Запрос:</strong> <code>{}</code></p>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "date": "2022-07-08T00:00:00",
+  "isActive": true,
+  "idRecStatus": null,
+  "idXml": "31670029-8982-4eea-9004-11af76ea9c07"
+}</pre>
+
+<h3 id="ex-prod-un-catalog-rus">3.5.21. suspect-catalogs/current-un-catalog-rus</h3>
+<p><strong>Запрос:</strong> <code>{}</code></p>
+<p><strong>Ответ:</strong></p>
+<pre>{
+  "date": "2022-07-08T00:00:00",
+  "isActive": true,
+  "idRecStatus": null,
+  "idXml": "31670029-8982-4eea-9004-11af76ea9c07"
+}</pre>
+
+<h3 id="ex-prod-un-file">3.5.22. suspect-catalogs/current-un-file</h3>
+<p><strong>Запрос:</strong></p>
+<pre>{ "idXml": "31670029-8982-4eea-9004-11af76ea9c07" }</pre>
+<p><strong>Ответ:</strong> <code>{... Binary data file content...}</code></p>
+
+</section>
+<a class="back-to-top" href="#toc">&uarr; К оглавлению</a>
+</article>
+
+<!-- ========================== РАЗДЕЛ 4 ========================== -->
+<article id="sec-4">
+<h1>4. Получение доступа к методам</h1>
+
+<section id="sec-4-1">
+<h2>4.1. Порядок получения доступа к тестовым методам электронного сервиса</h2>
+<p>Для получения доступа к интересующим тестовым методам необходимо через свой Личный кабинет на официальном сайте Росфинмониторинга направить заявку в техническую поддержку, указав в поле Тематика обращения &laquo;Сервисный концентратор&raquo;, а в тексте указать: &laquo;Регламентная процедура. Получение доступа к тестовым методам ЭС&raquo;.</p>
+</section>
+
+<section id="sec-4-2">
+<h2>4.2. Порядок получения доступа к продуктивным методам электронного сервиса</h2>
+<p>Для получения доступа к продуктивным методам ЭС необходимо:</p>
+<ol>
+<li>Успешно пройти тестирование, вызвав <strong>все тестовые методы ЭС</strong>;</li>
+<li>Заполнить форму заявки на получение доступа к продуктивным методам ЭС и вместе с неформатированными конвертами запросов-ответов (требуются только те запросы и ответы, которые содержат параметры) к тестовым методам ЭС в формате JSON упаковать в zip-архив. <strong>Прикладывать конверт запрос-ответа метода authenticate не требуется</strong>;</li>
+<li>Сформированный архив направить в Росфинмониторинг, заполнив заявку в техническую поддержку и указать в Тематике обращения: &laquo;Сервисный концентратор&raquo;, а в тексте заявки: &laquo;Регламентная процедура. Получение доступа к продуктивным методам ЭС&raquo;.</li>
+</ol>
+</section>
+</article>
+
+<!-- ========================== ПРИЛОЖЕНИЕ 1 ========================== -->
+<article id="appendix-1">
+<h1>Приложение 1. Заявка на получение доступа к продуктивным методам ЭС</h1>
+
+<table>
+<caption>Заявка на получение доступа к продуктивным методам электронного сервиса &laquo;Сервисный концентратор Росфинмониторинга&raquo;</caption>
+<tbody>
+<tr><td colspan="2"><strong>Данные о пользователе Личного кабинета</strong></td></tr>
+<tr><td>Полное наименование</td><td></td></tr>
+<tr><td>Краткое наименование</td><td></td></tr>
+<tr><td>ИНН</td><td></td></tr>
+<tr><td>ОГРН</td><td></td></tr>
+<tr><td>БИК (при наличии)</td><td></td></tr>
+<tr><td>Идентификатор корреспондента</td><td></td></tr>
+<tr><td>Логин пользователя</td><td></td></tr>
+<tr><td>Серийный номер открытого ключа ЭП</td><td></td></tr>
+<tr><td colspan="2"><strong>Данные о методах ЭС, к которым запрашивается доступ *</strong></td></tr>
+<tr><td>Код метода ЭС</td><td><em>suspect-catalogs/current-te2-catalog</em></td></tr>
+<tr><td>Дата и время успешного вызова</td><td><em>19.09.2019 12:05</em></td></tr>
+<tr><td>Файл с запросом</td><td><em>Отсутствует. Запрос не содержит параметров</em></td></tr>
+<tr><td>Файл с ответом</td><td><em>1_RespTE.json</em></td></tr>
+<tr><td>Код метода ЭС</td><td><em>suspect-catalogs/current-te2-file</em></td></tr>
+<tr><td>Дата и время успешного вызова</td><td><em>19.09.2019 12:06</em></td></tr>
+<tr><td>Файл с запросом</td><td><em>2_ReqTE.json</em></td></tr>
+<tr><td>Файл с ответом</td><td><em>Отсутствует. В ответе только бинарные данные</em></td></tr>
+<tr><td>Код метода ЭС</td><td><em>suspect-catalogs/current-mvk-catalog</em></td></tr>
+<tr><td>Дата и время успешного вызова</td><td><em>19.09.2019 12:15</em></td></tr>
+<tr><td>Файл с запросом</td><td><em>Отсутствует. Запрос не содержит параметров</em></td></tr>
+<tr><td>Файл с ответом</td><td><em>3_RespMVK.json</em></td></tr>
+<tr><td>Код метода ЭС</td><td><em>suspect-catalogs/current-mvk-file-zip</em></td></tr>
+<tr><td>Дата и время успешного вызова</td><td><em>19.09.2019 12:16</em></td></tr>
+<tr><td>Файл с запросом</td><td><em>4_ReqMVK.json</em></td></tr>
+<tr><td>Файл с ответом</td><td><em>Отсутствует. В ответе только бинарные данные</em></td></tr>
+<tr><td>Код метода ЭС</td><td><em>formalized-message/get-ticket</em></td></tr>
+<tr><td>Дата и время успешного вызова</td><td><em>19.09.2019 12:15</em></td></tr>
+<tr><td>Файл с запросом</td><td><em>Отсутствует. Запрос не содержит параметров</em></td></tr>
+<tr><td>Файл с ответом</td><td><em>3_RespMVK.json</em></td></tr>
+<tr><td>Код метода ЭС</td><td><em>formalized-message/send</em></td></tr>
+<tr><td>Дата и время успешного вызова</td><td><em>19.09.2019 12:16</em></td></tr>
+<tr><td>Файл с запросом</td><td><em>4_ReqMVK.json</em></td></tr>
+<tr><td>Файл с ответом</td><td><em>Отсутствует. В ответе только бинарные данные</em></td></tr>
+<tr><td>Код метода ЭС</td><td><em>formalized-message/send-with-mchd</em></td></tr>
+<tr><td>Дата и время успешного вызова</td><td><em>19.09.2019 12:15</em></td></tr>
+<tr><td>Файл с запросом</td><td><em>Отсутствует. Запрос не содержит параметров</em></td></tr>
+<tr><td>Файл с ответом</td><td><em>3_RespMVK.json</em></td></tr>
+<tr><td>Код метода ЭС</td><td><em>formalized-message/check-status</em></td></tr>
+<tr><td>Дата и время успешного вызова</td><td><em>19.09.2019 12:16</em></td></tr>
+<tr><td>Файл с запросом</td><td><em>4_ReqMVK.json</em></td></tr>
+<tr><td>Файл с ответом</td><td><em>Отсутствует. В ответе только бинарные данные</em></td></tr>
+<tr><td colspan="2"><strong>Ответственные за функционирование ПО, взаимодействующего с ЭС</strong></td></tr>
+<tr><td>Ф.И.О.</td><td></td></tr>
+<tr><td>Должность</td><td></td></tr>
+<tr><td>Контактный телефон</td><td></td></tr>
+<tr><td>Адрес электронной почты</td><td></td></tr>
+<tr><td>Ф.И.О. 2</td><td></td></tr>
+<tr><td>Должность 2</td><td></td></tr>
+<tr><td>Контактный телефон 2</td><td></td></tr>
+<tr><td>Адрес электронной почты 2</td><td></td></tr>
+</tbody>
+</table>
+<a class="back-to-top" href="#toc">&uarr; К оглавлению</a>
+</article>
+
+<footer style="margin-top:3rem; padding-top:1rem; border-top:1px solid var(--border); color:#9ca3af; font-size:0.8rem;">
+<p>Документ сгенерирован автоматически из исходного MD-файла. Версия документа: 1.2</p>
+</footer>
+</body>
+</html>
