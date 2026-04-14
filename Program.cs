@@ -149,8 +149,8 @@ internal static class Program
             if (isFesMode)
             {
                 // Режим ФЭС: только отправка, статус, квитанция
-                if (cfg.MchdFiles is { Length: > 0 })
-                    await client.SendFesWithMchdAsync(cfg.FesFile!, cfg.MchdFiles);
+                if (cfg.MchdFile is not null)
+                    await client.SendFesWithMchdAsync(cfg.FesFile!, cfg.MchdFile);
                 else
                     await client.SendFesAsync(cfg.FesFile!);
             }
@@ -450,7 +450,7 @@ internal sealed class RfmClient : IDisposable
 
     // ── ФЭС с МЧД — send-with-mchd ──────────────────────────────────────
 
-    public async Task SendFesWithMchdAsync(string filePath, string[] mchdFiles)
+    public async Task SendFesWithMchdAsync(string filePath, string mchdFile)
     {
         Logger.Step($"Отправка ФЭС с МЧД: {Path.GetFileName(filePath)}...");
 
@@ -465,47 +465,35 @@ internal sealed class RfmClient : IDisposable
         }
         Logger.Info($"Файл подписи ФЭС: {Path.GetFileName(sigPath)}");
 
-        // Проверяем МЧД-файлы и их подписи
-        var mchdPairs = new List<(string file, string sig)>();
-        foreach (string mchdPath in mchdFiles)
+        // Проверяем МЧД-файл и его подпись
+        if (!File.Exists(mchdFile))
         {
-            if (!File.Exists(mchdPath))
-            {
-                Logger.Error($"МЧД-файл не найден: {mchdPath}");
-                return;
-            }
-
-            string mchdSigPath = mchdPath + ".sig";
-            if (!File.Exists(mchdSigPath))
-                mchdSigPath = Path.ChangeExtension(mchdPath, ".sig");
-            if (!File.Exists(mchdSigPath))
-            {
-                Logger.Error($"Подпись МЧД не найдена: ожидается {mchdPath}.sig или {Path.ChangeExtension(mchdPath, ".sig")}");
-                return;
-            }
-
-            mchdPairs.Add((mchdPath, mchdSigPath));
-            Logger.Info($"МЧД: {Path.GetFileName(mchdPath)}, подпись: {Path.GetFileName(mchdSigPath)}");
+            Logger.Error($"МЧД-файл не найден: {mchdFile}");
+            return;
         }
+        string mchdSigPath = mchdFile + ".sig";
+        if (!File.Exists(mchdSigPath))
+            mchdSigPath = Path.ChangeExtension(mchdFile, ".sig");
+        if (!File.Exists(mchdSigPath))
+        {
+            Logger.Error($"Подпись МЧД не найдена: ожидается {mchdFile}.sig или {Path.ChangeExtension(mchdFile, ".sig")}");
+            return;
+        }
+        Logger.Info($"МЧД: {Path.GetFileName(mchdFile)}, подпись: {Path.GetFileName(mchdSigPath)}");
 
         string? messageId = null;
         string? externalId = null;
         try
         {
-            byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
-            byte[] sigBytes  = await File.ReadAllBytesAsync(sigPath);
-
-            var mchdBytesList    = new List<byte[]>();
-            var mchdSigBytesList = new List<byte[]>();
-            foreach (var (mf, ms) in mchdPairs)
-            {
-                mchdBytesList.Add(await File.ReadAllBytesAsync(mf));
-                mchdSigBytesList.Add(await File.ReadAllBytesAsync(ms));
-            }
+            byte[] fileBytes    = await File.ReadAllBytesAsync(filePath);
+            byte[] sigBytes     = await File.ReadAllBytesAsync(sigPath);
+            byte[] mchdBytes    = await File.ReadAllBytesAsync(mchdFile);
+            byte[] mchdSigBytes = await File.ReadAllBytesAsync(mchdSigPath);
 
             var json = await PostMultipartMchdAsync(_ep["fes_send_mchd"], fileBytes,
                 Path.GetFileName(filePath), sigBytes,
-                mchdBytesList, mchdSigBytesList, mchdPairs,
+                mchdBytes, Path.GetFileName(mchdFile),
+                mchdSigBytes, Path.GetFileName(mchdSigPath),
                 "fes_send_mchd_request.json");
             SaveJson(json, "fes_send_mchd_response.json");
 
@@ -603,8 +591,8 @@ internal sealed class RfmClient : IDisposable
 
     async Task<JsonNode?> PostMultipartMchdAsync(string endpoint,
         byte[] fileBytes, string fileName, byte[] sigBytes,
-        List<byte[]> mchdBytesList, List<byte[]> mchdSigBytesList,
-        List<(string file, string sig)> mchdPairs,
+        byte[] mchdBytes, string mchdFileName,
+        byte[] mchdSigBytes, string mchdSigFileName,
         string? requestFileName = null)
     {
         if (_saveRequests && requestFileName is not null)
@@ -612,20 +600,14 @@ internal sealed class RfmClient : IDisposable
             {
                 file = fileName,
                 signLength = sigBytes.Length,
-                mchdCount = mchdBytesList.Count
+                mchd = mchdFileName
             }), requestFileName);
 
         using var content = new MultipartFormDataContent();
         content.Add(new ByteArrayContent(fileBytes), "file", fileName);
         content.Add(new ByteArrayContent(sigBytes), "sign", fileName + ".sig");
-
-        for (int i = 0; i < mchdBytesList.Count; i++)
-        {
-            string mchdFileName = Path.GetFileName(mchdPairs[i].file);
-            string mchdSigFileName = Path.GetFileName(mchdPairs[i].sig);
-            content.Add(new ByteArrayContent(mchdBytesList[i]), "mchd", mchdFileName);
-            content.Add(new ByteArrayContent(mchdSigBytesList[i]), "mchdSign", mchdSigFileName);
-        }
+        content.Add(new ByteArrayContent(mchdBytes), "mchd", mchdFileName);
+        content.Add(new ByteArrayContent(mchdSigBytes), "mchdSign", mchdSigFileName);
 
         using var req = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/{endpoint}");
         req.Content = content;
@@ -879,7 +861,7 @@ internal sealed class AppArgs
     public bool    ListCerts  { get; private set; }
     public string  ConfigFile    { get; private set; } = IniConfig.DefaultFile;
     public string? FesFile       { get; private set; }
-    public string[]? MchdFiles   { get; private set; }
+    public string? MchdFile      { get; private set; }
     public bool    SaveRequests  { get; private set; }
     public string? LogFile       { get; private set; }
 
@@ -907,8 +889,8 @@ internal sealed class AppArgs
                     break;
                 case "--fes"        when i + 1 < argv.Length: a.FesFile   = argv[++i]; a._fesSet        = true; break;
                 case "--mchd"       when i + 1 < argv.Length:
-                    a.MchdFiles = argv[++i].Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    a._mchdSet  = true;
+                    a.MchdFile = argv[++i];
+                    a._mchdSet = true;
                     break;
                 case "--log"           when i + 1 < argv.Length: a.LogFile = argv[++i]; a._logFileSet = true; break;
                 case "--save-requests": a.SaveRequests = true; a._saveRequestsSet = true; break;
@@ -933,8 +915,8 @@ internal sealed class AppArgs
         if (!_timeoutSet    && ini.GetInt("timeout") is int sec)    TimeoutSec = sec;
         if (!_modeSet       && ini.Get("mode")       is string m)   Mode       = ParseMode(m);
         if (!_fesSet        && ini.Get("fes_file")   is string ff)  FesFile    = ff;
-        if (!_mchdSet       && ini.Get("mchd_files") is string mf)
-            MchdFiles = mf.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        if (!_mchdSet       && ini.Get("mchd_file") is string mf)
+            MchdFile = mf;
         if (!_saveRequestsSet && ini.Get("save_requests") is string sr)
             SaveRequests = sr.Trim().ToLowerInvariant() is "true" or "1" or "yes";
         if (!_logFileSet && ini.Get("log_file") is string lf)
@@ -958,7 +940,7 @@ internal sealed class AppArgs
             "  --output      <папка>      Базовая папка для файлов    (по умолчанию: rfm_data)\n" +
             "  --timeout     <секунды>    Таймаут HTTP                (по умолчанию: 60)\n" +
             "  --fes         <файл>       XML-файл ФЭС для отправки\n" +
-            "  --mchd        <файлы>      МЧД-файлы (через запятую) для отправки с ФЭС\n" +
+            "  --mchd        <файл>       МЧД-файл для отправки с ФЭС\n" +
             "  --log         <файл>       Файл журнала (дублирует вывод в файл)\n" +
             "  --save-requests            Сохранять тела запросов в *_request.json\n" +
             "  --list-certs               Показать сертификаты и выйти\n" +
@@ -971,7 +953,7 @@ internal sealed class AppArgs
             "  RfmDownloader.exe --config prod.ini            (отдельный ini для прода)\n" +
             "  RfmDownloader.exe --mode prod --output D:\\rfm  (прод + своя папка)\n" +
             "  RfmDownloader.exe --fes message.xml            (отправить ФЭС)\n" +
-            "  RfmDownloader.exe --fes msg.xml --mchd m1.xml,m2.xml (ФЭС с МЧД)"
+            "  RfmDownloader.exe --fes msg.xml --mchd m.xml (ФЭС с МЧД)"
         );
     }
 }
