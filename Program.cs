@@ -138,8 +138,10 @@ internal static class Program
                 Logger.Warn("Сертификат не указан — попытка без клиентского сертификата.");
 
             var ep = Endpoints.For(cfg.Mode);
-            using var client = new RfmClient(cert, outDir, cfg.TimeoutSec, ep, cfg.SaveRequests);
+            using var client = new RfmClient(cert, outDir, cfg.TimeoutSec, ep, cfg.SaveRequests, cfg.Debug);
 
+            if (cfg.Debug)
+                Logger.Info("Режим отладки: ВКЛЮЧЁН (URL запросов выводятся в лог)");
             if (cfg.SaveRequests)
                 Logger.Info("Сохранение тел запросов: ВКЛЮЧЕНО");
 
@@ -214,10 +216,11 @@ internal static class Logger
 
     public static void Close() => _fileWriter?.Dispose();
 
-    public static void Info(string msg)  => Write(msg, "✓", ConsoleColor.Green,  "INFO");
-    public static void Step(string msg)  => Write(msg, "→", ConsoleColor.Cyan,   "STEP");
-    public static void Warn(string msg)  => Write(msg, "⚠", ConsoleColor.Yellow, "WARN");
-    public static void Error(string msg) => Write(msg, "✗", ConsoleColor.Red,    "ERROR");
+    public static void Info(string msg)  => Write(msg, "✓", ConsoleColor.Green,   "INFO");
+    public static void Step(string msg)  => Write(msg, "→", ConsoleColor.Cyan,    "STEP");
+    public static void Warn(string msg)  => Write(msg, "⚠", ConsoleColor.Yellow,  "WARN");
+    public static void Error(string msg) => Write(msg, "✗", ConsoleColor.Red,     "ERROR");
+    public static void Debug(string msg) => Write(msg, "·", ConsoleColor.DarkGray,"DEBUG");
 
     static void Write(string msg, string icon, ConsoleColor color, string level)
     {
@@ -246,14 +249,17 @@ internal sealed class RfmClient : IDisposable
     readonly string                      _outDir;
     readonly Dictionary<string, string>  _ep;
     readonly bool                        _saveRequests;
+    readonly bool                        _debug;
     string?                              _token;
 
     public RfmClient(X509Certificate2? cert, string outDir, int timeoutSec,
-                     Dictionary<string, string> endpoints, bool saveRequests = false)
+                     Dictionary<string, string> endpoints, bool saveRequests = false,
+                     bool debug = false)
     {
         _outDir       = outDir;
         _ep           = endpoints;
         _saveRequests = saveRequests;
+        _debug        = debug;
 
         var handler = new HttpClientHandler
         {
@@ -284,8 +290,8 @@ internal sealed class RfmClient : IDisposable
             SaveJson(json, "auth_response.json");
 
             // Документация (Табл. 5/17) указывает access_token, примеры — accessToken
-            _token = json?["value"]?["accessToken"]?.GetValue<string>()
-                  ?? json?["value"]?["access_token"]?.GetValue<string>();
+            _token = json.GetField("value").GetField("accessToken")?.GetValue<string>()
+                  ?? json.GetField("value").GetField("access_token")?.GetValue<string>();
 
             if (!string.IsNullOrEmpty(_token) && _token != "token")
                 Logger.Info("Авторизация успешна, JWT-токен получен");
@@ -317,9 +323,8 @@ internal sealed class RfmClient : IDisposable
             SaveJson(catalog, "te_catalog.json");
 
             // v2 возвращает idXml или idDbf; v2.1 возвращает IdXml (с заглавной)
-            string? fileId = catalog?["idXml"]?.GetValue<string>()
-                          ?? catalog?["IdXml"]?.GetValue<string>()
-                          ?? catalog?["idDbf"]?.GetValue<string>();
+            string? fileId = catalog.GetField("idXml")?.GetValue<string>()
+                          ?? catalog.GetField("idDbf")?.GetValue<string>();
 
             if (fileId is null) { Logger.Warn("Идентификатор файла ТЭ не найден."); return; }
 
@@ -342,7 +347,7 @@ internal sealed class RfmClient : IDisposable
             var catalog = await PostJsonAsync(_ep["mvk_catalog"], new { }, "mvk_catalog_request.json");
             SaveJson(catalog, "mvk_catalog.json");
 
-            string? fileId = catalog?["idXml"]?.GetValue<string>();
+            string? fileId = catalog.GetField("idXml")?.GetValue<string>();
             if (fileId is null) { Logger.Warn("Идентификатор файла МВК не найден."); return; }
 
             Logger.Step($"Загрузка zip-файла МВК (id={fileId})...");
@@ -364,8 +369,7 @@ internal sealed class RfmClient : IDisposable
         {
             var cat = await PostJsonAsync(_ep["un_catalog"], new { }, "un_catalog_en_request.json");
             SaveJson(cat, "un_catalog_en.json");
-            fileId = cat?["idXml"]?.GetValue<string>()
-                  ?? cat?["IdXml"]?.GetValue<string>();
+            fileId = cat.GetField("idXml")?.GetValue<string>();
         }
         catch (Exception ex) { Logger.Error($"Ошибка каталога ООН EN: {ex.Message}"); }
 
@@ -420,10 +424,10 @@ internal sealed class RfmClient : IDisposable
                 Path.GetFileName(filePath), sigBytes, "fes_send_request.json");
             SaveJson(json, "fes_send_response.json");
 
-            messageId  = json?["IdFormalizedMessage"]?.GetValue<string>();
-            externalId = json?["IdExternal"]?.GetValue<string>();
-            string? statusName = json?["FormalizedMessageStatusName"]?.GetValue<string>();
-            string? note       = json?["Note"]?.GetValue<string>();
+            messageId  = json.GetField("IdFormalizedMessage")?.GetValue<string>();
+            externalId = json.GetField("IdExternal")?.GetValue<string>();
+            string? statusName = json.GetField("FormalizedMessageStatusName")?.GetValue<string>();
+            string? note       = json.GetField("Note")?.GetValue<string>();
 
             if (messageId is null)
             {
@@ -497,10 +501,10 @@ internal sealed class RfmClient : IDisposable
                 "fes_send_mchd_request.json");
             SaveJson(json, "fes_send_mchd_response.json");
 
-            messageId  = json?["IdFormalizedMessage"]?.GetValue<string>();
-            externalId = json?["IdExternal"]?.GetValue<string>();
-            string? statusName = json?["FormalizedMessageStatusName"]?.GetValue<string>();
-            string? note       = json?["Note"]?.GetValue<string>();
+            messageId  = json.GetField("IdFormalizedMessage")?.GetValue<string>();
+            externalId = json.GetField("IdExternal")?.GetValue<string>();
+            string? statusName = json.GetField("FormalizedMessageStatusName")?.GetValue<string>();
+            string? note       = json.GetField("Note")?.GetValue<string>();
 
             if (messageId is null)
             {
@@ -527,15 +531,18 @@ internal sealed class RfmClient : IDisposable
 
     async Task CheckFesStatusAsync(string messageId, string? externalId)
     {
+        await Task.Delay(TimeSpan.FromSeconds(3));
         Logger.Step($"Проверка статуса ФЭС (id={messageId})...");
         try
         {
-            var body = new { IdFormalizedMessage = messageId, IdExternal = externalId ?? "" };
-            var json = await PostJsonAsync(_ep["fes_status"], body, "fes_status_request.json");
+            var bodyObj = new JsonObject { ["IdFormalizedMessage"] = messageId };
+            if (!string.IsNullOrEmpty(externalId))
+                bodyObj["IdExternal"] = externalId;
+            var json = await PostJsonAsync(_ep["fes_status"], bodyObj, "fes_status_request.json");
             SaveJson(json, "fes_status_response.json");
 
-            string? statusName = json?["FormalizedMessageStatusName"]?.GetValue<string>();
-            string? note       = json?["Note"]?.GetValue<string>();
+            string? statusName = json.GetField("FormalizedMessageStatusName")?.GetValue<string>();
+            string? note       = json.GetField("Note")?.GetValue<string>();
 
             Logger.Info($"Статус ФЭС: {statusName ?? "(не определён)"}");
             if (note is not null)
@@ -549,17 +556,35 @@ internal sealed class RfmClient : IDisposable
 
     async Task DownloadFesReceiptAsync(string messageId, string? externalId)
     {
+        const int maxAttempts = 10;
+        const int delaySeconds = 10;
+
         Logger.Step($"Загрузка квитанции ФЭС (id={messageId})...");
-        try
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            await PostJsonToBinaryAsync(_ep["fes_receipt"],
-                new { IdFormalizedMessage = messageId, IdExternal = externalId ?? "" },
-                "fes_receipt.xml", "fes_receipt_request.json");
+            try
+            {
+                var receiptBody = new JsonObject { ["IdFormalizedMessage"] = messageId };
+                if (!string.IsNullOrEmpty(externalId))
+                    receiptBody["IdExternal"] = externalId;
+                bool ready = await PostJsonToBinaryAsync(_ep["fes_receipt"],
+                    receiptBody,
+                    "fes_receipt.xml", attempt == 1 ? "fes_receipt_request.json" : null);
+                if (ready) return;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Ошибка квитанции ФЭС: {ex.Message}");
+                return;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                Logger.Warn($"Квитанция не готова, попытка {attempt}/{maxAttempts}. Повтор через {delaySeconds} с...");
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+            }
         }
-        catch (Exception ex)
-        {
-            Logger.Error($"Ошибка квитанции ФЭС: {ex.Message}");
-        }
+        Logger.Error($"Квитанция ФЭС не получена после {maxAttempts} попыток.");
     }
 
     // ── HTTP-хелперы ────────────────────────────────────────────────────────
@@ -568,6 +593,7 @@ internal sealed class RfmClient : IDisposable
         byte[] fileBytes, string fileName, byte[] sigBytes,
         string? requestFileName = null)
     {
+        if (_debug) Logger.Debug($"POST {BaseUrl}/{endpoint}");
         if (_saveRequests && requestFileName is not null)
             SaveRawJson(JsonSerializer.Serialize(new { file = fileName, signLength = sigBytes.Length }), requestFileName);
 
@@ -595,6 +621,7 @@ internal sealed class RfmClient : IDisposable
         byte[] mchdSigBytes, string mchdSigFileName,
         string? requestFileName = null)
     {
+        if (_debug) Logger.Debug($"POST {BaseUrl}/{endpoint}");
         if (_saveRequests && requestFileName is not null)
             SaveRawJson(JsonSerializer.Serialize(new
             {
@@ -623,9 +650,11 @@ internal sealed class RfmClient : IDisposable
         return JsonNode.Parse(raw);
     }
 
-    async Task PostJsonToBinaryAsync(string endpoint, object body,
+    // Возвращает true если файл получен и сохранён, false если квитанция ещё не готова.
+    async Task<bool> PostJsonToBinaryAsync(string endpoint, object body,
         string fileName, string? requestFileName = null)
     {
+        if (_debug) Logger.Debug($"POST {BaseUrl}/{endpoint}");
         string serialized = JsonSerializer.Serialize(body);
 
         if (_saveRequests && requestFileName is not null)
@@ -636,23 +665,40 @@ internal sealed class RfmClient : IDisposable
         AddAuth(req);
 
         using var resp = await _http.SendAsync(req);
-        if (!resp.IsSuccessStatusCode)
+        string? ct = resp.Content.Headers.ContentType?.MediaType;
+        bool isJson = ct is not null && ct.Contains("json", StringComparison.OrdinalIgnoreCase);
+
+        if (!resp.IsSuccessStatusCode || isJson)
         {
-            string err = await resp.Content.ReadAsStringAsync();
-            throw new HttpRequestException(
-                $"HTTP {(int)resp.StatusCode}: {err[..Math.Min(200, err.Length)]}");
+            string body2 = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode)
+                throw new HttpRequestException(
+                    $"HTTP {(int)resp.StatusCode}: {body2[..Math.Min(200, body2.Length)]}");
+
+            if (_debug) Logger.Debug($"Ответ сервера: {body2[..Math.Min(300, body2.Length)]}");
+            return false;
         }
 
         byte[] bytes = await resp.Content.ReadAsByteArrayAsync();
-        string path  = Path.Combine(_outDir, fileName);
+
+        // Защита: если Content-Type не указан, но тело начинается с '{' — это JSON, не файл
+        if (bytes.Length > 0 && bytes[0] == (byte)'{')
+        {
+            if (_debug) Logger.Debug($"Тело ответа начинается с '{{' — вероятно JSON, квитанция не готова");
+            return false;
+        }
+
+        string path = Path.Combine(_outDir, fileName);
         await File.WriteAllBytesAsync(path, bytes);
         Logger.Info($"Квитанция сохранена: {fileName}  ({bytes.Length:N0} байт)");
+        return true;
     }
 
     async Task<JsonNode?> PostJsonAsync(string endpoint, object body,
-        string? requestFileName = null)
+        string? requestFileName = null, JsonSerializerOptions? serializerOptions = null)
     {
-        string serialized = JsonSerializer.Serialize(body);
+        if (_debug) Logger.Debug($"POST {BaseUrl}/{endpoint}");
+        string serialized = JsonSerializer.Serialize(body, serializerOptions);
 
         if (_saveRequests && requestFileName is not null)
             SaveRawJson(serialized, requestFileName);
@@ -675,6 +721,7 @@ internal sealed class RfmClient : IDisposable
         Dictionary<string, string> fields, string fileName,
         string? requestFileName = null)
     {
+        if (_debug) Logger.Debug($"POST {BaseUrl}/{endpoint}");
         if (_saveRequests && requestFileName is not null)
             SaveRawJson(JsonSerializer.Serialize(fields), requestFileName);
 
@@ -717,6 +764,23 @@ internal sealed class RfmClient : IDisposable
     }
 
     public void Dispose() => _http.Dispose();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// JsonNodeExtensions — поиск поля без учёта регистра
+// ════════════════════════════════════════════════════════════════════════════
+
+internal static class JsonNodeExtensions
+{
+    /// <summary>Возвращает дочернее поле JsonObject, игнорируя регистр ключа.</summary>
+    public static JsonNode? GetField(this JsonNode? node, string key)
+    {
+        if (node is not JsonObject obj) return null;
+        foreach (var kv in obj)
+            if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+                return kv.Value;
+        return null;
+    }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -863,10 +927,11 @@ internal sealed class AppArgs
     public string? FesFile       { get; private set; }
     public string? MchdFile      { get; private set; }
     public bool    SaveRequests  { get; private set; }
+    public bool    Debug         { get; private set; }
     public string? LogFile       { get; private set; }
 
     // Флаги явной установки через CLI
-    bool _userSet, _passwordSet, _thumbprintSet, _outputSet, _timeoutSet, _modeSet, _fesSet, _mchdSet, _saveRequestsSet, _logFileSet;
+    bool _userSet, _passwordSet, _thumbprintSet, _outputSet, _timeoutSet, _modeSet, _fesSet, _mchdSet, _saveRequestsSet, _debugSet, _logFileSet;
 
     public static AppArgs Parse(string[] argv)
     {
@@ -894,6 +959,7 @@ internal sealed class AppArgs
                     break;
                 case "--log"           when i + 1 < argv.Length: a.LogFile = argv[++i]; a._logFileSet = true; break;
                 case "--save-requests": a.SaveRequests = true; a._saveRequestsSet = true; break;
+                case "--debug":        a.Debug = true;        a._debugSet         = true; break;
                 case "--list-certs": a.ListCerts = true; break;
                 case "--help":
                 case "-h":
@@ -919,6 +985,8 @@ internal sealed class AppArgs
             MchdFile = mf;
         if (!_saveRequestsSet && ini.Get("save_requests") is string sr)
             SaveRequests = sr.Trim().ToLowerInvariant() is "true" or "1" or "yes";
+        if (!_debugSet && ini.Get("debug") is string dbg)
+            Debug = dbg.Trim().ToLowerInvariant() is "true" or "1" or "yes";
         if (!_logFileSet && ini.Get("log_file") is string lf)
             LogFile = lf;
     }
@@ -943,6 +1011,7 @@ internal sealed class AppArgs
             "  --mchd        <файл>       МЧД-файл для отправки с ФЭС\n" +
             "  --log         <файл>       Файл журнала (дублирует вывод в файл)\n" +
             "  --save-requests            Сохранять тела запросов в *_request.json\n" +
+            "  --debug                    Выводить URL каждого HTTP-запроса в лог\n" +
             "  --list-certs               Показать сертификаты и выйти\n" +
             "  --help                     Эта справка\n\n" +
             "Приоритет: ключи командной строки > config.ini > значения по умолчанию\n\n" +
