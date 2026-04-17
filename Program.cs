@@ -430,7 +430,8 @@ internal sealed class RfmClient : IDisposable
             SaveJson(json, "fes_send_response.json");
 
             messageId  = json.GetField("IdFormalizedMessage")?.GetValue<string>();
-            externalId = json.GetField("IdExternal")?.GetValue<string>() ?? nomerZapisi;
+            string? rawExternal = json.GetField("IdExternal")?.GetValue<string>();
+            externalId = string.IsNullOrEmpty(rawExternal) ? nomerZapisi : rawExternal;
             string? statusName = json.GetField("FormalizedMessageStatusName")?.GetValue<string>();
             string? note       = json.GetField("Note")?.GetValue<string>();
 
@@ -440,7 +441,7 @@ internal sealed class RfmClient : IDisposable
                 return;
             }
             Logger.Info($"ФЭС отправлен, id={messageId}");
-            if (externalId is not null)
+            if (!string.IsNullOrEmpty(externalId))
                 Logger.Info($"Внешний id: {externalId}");
             if (statusName is not null)
                 Logger.Info($"Статус: {statusName}");
@@ -511,7 +512,8 @@ internal sealed class RfmClient : IDisposable
             SaveJson(json, "fes_send_mchd_response.json");
 
             messageId  = json.GetField("IdFormalizedMessage")?.GetValue<string>();
-            externalId = json.GetField("IdExternal")?.GetValue<string>() ?? nomerZapisi;
+            string? rawExternal = json.GetField("IdExternal")?.GetValue<string>();
+            externalId = string.IsNullOrEmpty(rawExternal) ? nomerZapisi : rawExternal;
             string? statusName = json.GetField("FormalizedMessageStatusName")?.GetValue<string>();
             string? note       = json.GetField("Note")?.GetValue<string>();
 
@@ -521,7 +523,7 @@ internal sealed class RfmClient : IDisposable
                 return;
             }
             Logger.Info($"ФЭС с МЧД отправлен, id={messageId}");
-            if (externalId is not null)
+            if (!string.IsNullOrEmpty(externalId))
                 Logger.Info($"Внешний id: {externalId}");
             if (statusName is not null)
                 Logger.Info($"Статус: {statusName}");
