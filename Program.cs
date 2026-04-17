@@ -22,6 +22,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Xml.Linq;
 
 namespace RfmDownloader;
 
@@ -413,6 +414,10 @@ internal sealed class RfmClient : IDisposable
         }
         Logger.Info($"Файл подписи: {Path.GetFileName(sigPath)}");
 
+        string? nomerZapisi = ReadNomerZapisi(filePath);
+        if (nomerZapisi is not null)
+            Logger.Info($"НомерЗаписи: {nomerZapisi}");
+
         string? messageId = null;
         string? externalId = null;
         try
@@ -425,11 +430,11 @@ internal sealed class RfmClient : IDisposable
             SaveJson(json, "fes_send_response.json");
 
             messageId  = json.GetField("IdFormalizedMessage")?.GetValue<string>();
-            externalId = json.GetField("IdExternal")?.GetValue<string>();
+            externalId = json.GetField("IdExternal")?.GetValue<string>() ?? nomerZapisi;
             string? statusName = json.GetField("FormalizedMessageStatusName")?.GetValue<string>();
             string? note       = json.GetField("Note")?.GetValue<string>();
 
-            if (messageId is null)
+            if (string.IsNullOrEmpty(messageId))
             {
                 Logger.Warn("Идентификатор ФЭС-сообщения не получен.");
                 return;
@@ -485,6 +490,10 @@ internal sealed class RfmClient : IDisposable
         }
         Logger.Info($"МЧД: {Path.GetFileName(mchdFile)}, подпись: {Path.GetFileName(mchdSigPath)}");
 
+        string? nomerZapisi = ReadNomerZapisi(filePath);
+        if (nomerZapisi is not null)
+            Logger.Info($"НомерЗаписи: {nomerZapisi}");
+
         string? messageId = null;
         string? externalId = null;
         try
@@ -502,11 +511,11 @@ internal sealed class RfmClient : IDisposable
             SaveJson(json, "fes_send_mchd_response.json");
 
             messageId  = json.GetField("IdFormalizedMessage")?.GetValue<string>();
-            externalId = json.GetField("IdExternal")?.GetValue<string>();
+            externalId = json.GetField("IdExternal")?.GetValue<string>() ?? nomerZapisi;
             string? statusName = json.GetField("FormalizedMessageStatusName")?.GetValue<string>();
             string? note       = json.GetField("Note")?.GetValue<string>();
 
-            if (messageId is null)
+            if (string.IsNullOrEmpty(messageId))
             {
                 Logger.Warn("Идентификатор ФЭС-сообщения не получен.");
                 return;
@@ -527,6 +536,17 @@ internal sealed class RfmClient : IDisposable
 
         await CheckFesStatusAsync(messageId, externalId);
         await DownloadFesReceiptAsync(messageId, externalId);
+    }
+
+    static string? ReadNomerZapisi(string filePath)
+    {
+        try
+        {
+            var doc = XDocument.Load(filePath);
+            XNamespace ns = doc.Root?.Name.Namespace ?? XNamespace.None;
+            return doc.Descendants(ns + "НомерЗаписи").FirstOrDefault()?.Value?.Trim();
+        }
+        catch { return null; }
     }
 
     async Task CheckFesStatusAsync(string messageId, string? externalId)
