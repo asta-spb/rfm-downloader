@@ -387,8 +387,6 @@ internal sealed class RfmClient : IDisposable
             Logger.Step($"Загрузка xml-файла ООН (id={fileId})...");
             try
             {
-                // Табл. 22 документации: параметр "id", form-urlencoded
-                // Пример 3.5.22: { "idXml": "..." } — расхождение; следуем таблице
                 await PostFormToBinaryAsync(_ep["un_file"],
                     new Dictionary<string, string> { ["id"] = fileId }, "un_file.xml",
                     "un_file_request.json");

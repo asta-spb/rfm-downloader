@@ -2,7 +2,7 @@
 
 ## Documentation Rules
 
-The project has API documentation at `docs/index.html`.
+The project has API documentation at `docs/skr` and FES format documentation at `docs/rfm261`.
 
 When answering questions:
 - Look for the answer in the documentation first
