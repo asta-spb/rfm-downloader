@@ -70,9 +70,10 @@ internal static class Program
             else
                 Logger.Info("Режим запуска: ЗАГРУЗКА ПЕРЕЧНЕЙ");
 
-            // --no-subdir / no_subdir = true: используем cfg.Output как точный путь
-            // (для пакетного режима, когда папку создаёт внешний оркестратор).
-            // Иначе — стандартное поведение: <cfg.Output>\<mode>_<timestamp>\
+            // --no-subdir: используем cfg.Output как точный путь (пакетный режим).
+            // Иначе создаётся подпапка с датой:
+            //   test → <cfg.Output>\test_<yyyy-MM-dd_HH-mm-ss>\
+            //   prod → <cfg.Output>\<yyyy-MM-dd_HH-mm-ss>\
             string outDir;
             if (cfg.NoSubdir)
             {
@@ -152,9 +153,12 @@ internal static class Program
 
     static string CreateOutputDir(string basePath, RunMode mode)
     {
-        string modePrefix = mode == RunMode.Prod ? "prod" : "test";
-        string ts  = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        string dir = Path.Combine(basePath, $"{modePrefix}_{ts}");
+        // Имя подпапки:
+        //   test → "test_<yyyy-MM-dd_HH-mm-ss>" (визуально отделяем тестовые прогоны)
+        //   prod → "<yyyy-MM-dd_HH-mm-ss>"      (без префикса — рабочая директория)
+        string ts         = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        string folderName = mode == RunMode.Prod ? ts : $"test_{ts}";
+        string dir        = Path.Combine(basePath, folderName);
         Directory.CreateDirectory(dir);
         return dir;
     }

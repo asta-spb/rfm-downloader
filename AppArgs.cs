@@ -20,7 +20,7 @@ internal sealed class AppArgs
     public bool    SaveRequests  { get; private set; }
     public bool    Debug         { get; private set; }
     public string? LogFile       { get; private set; }
-    public bool    NoSubdir      { get; private set; }   // --no-subdir: использовать --output как точный путь без <mode>_<timestamp>
+    public bool    NoSubdir      { get; private set; }   // --no-subdir: использовать --output как точный путь, без подпапки с датой
 
     // Настройки опроса квитанции ФЭС — только из config.ini, секция [fes]
     public int     ReceiptMaxAttempts  { get; private set; } = 10;
@@ -141,7 +141,7 @@ internal sealed class AppArgs
             "  -l, --log            <файл>       Файл журнала (дублирует вывод в файл)\n" +
             "  -s, --save-requests               Сохранять служебные JSON-файлы\n" +
             "  -d, --debug                       Выводить URL каждого HTTP-запроса в лог\n" +
-            "  -n, --no-subdir                   Не создавать подпапку <mode>_<timestamp>\n" +
+            "  -n, --no-subdir                   Не создавать подпапку с датой\n" +
             "                                    (для пакетного режима — файлы прямо в --output)\n" +
             "  -L, --list-certs                  Показать сертификаты и выйти\n" +
             "  -v, --version                     Показать версию и время сборки\n" +
@@ -162,7 +162,7 @@ internal sealed class AppArgs
             "  RfmDownloader.exe --fes message.xml             # отправить ФЭС\n" +
             "  RfmDownloader.exe --fes msg.xml --mchd m.xml    # ФЭС с МЧД\n" +
             "\n" +
-            "  # Пакетный режим: файлы прямо в --output, без <mode>_<timestamp>\n" +
+            "  # Пакетный режим: файлы прямо в --output, без подпапки с датой\n" +
             "  RfmDownloader.exe --mode prod --output D:\\batch\\job_42 --no-subdir"
         );
     }
