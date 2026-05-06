@@ -1,0 +1,27 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RfmDownloader", "RfmDownloader.csproj", "{26C0CBE8-2EBF-4D95-81B0-EC3F720EFBFA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RfmDownloader.Tests", "RfmDownloader.Tests\RfmDownloader.Tests.csproj", "{8F036ED7-27D7-4FD6-88EF-072C1689208E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{26C0CBE8-2EBF-4D95-81B0-EC3F720EFBFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26C0CBE8-2EBF-4D95-81B0-EC3F720EFBFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26C0CBE8-2EBF-4D95-81B0-EC3F720EFBFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26C0CBE8-2EBF-4D95-81B0-EC3F720EFBFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F036ED7-27D7-4FD6-88EF-072C1689208E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F036ED7-27D7-4FD6-88EF-072C1689208E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F036ED7-27D7-4FD6-88EF-072C1689208E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F036ED7-27D7-4FD6-88EF-072C1689208E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

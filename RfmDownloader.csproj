@@ -15,6 +15,11 @@
          суффикс "+yyyyMMdd-HHmmss". Читается из кода через
          AssemblyInformationalVersionAttribute. -->
     <SourceRevisionId Condition="'$(SourceRevisionId)' == ''">$([System.DateTime]::UtcNow.ToString(yyyyMMdd-HHmmss))</SourceRevisionId>
+
+    <!-- Тестовый проект лежит в подпапке RfmDownloader.Tests/ — её надо исключить
+         из компиляции основного проекта, иначе SDK подхватит .cs-файлы тестов
+         (где есть using Xunit;) и попытается собрать их без xUnit-ссылок. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);RfmDownloader.Tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <!-- Открываем internal-члены тестовому проекту (xUnit) -->
