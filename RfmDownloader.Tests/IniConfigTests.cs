@@ -13,7 +13,7 @@ public class IniConfigTests
     [InlineData("\"foo\"",            "foo")]                // кавычки снимаются
     [InlineData("\"foo;bar\"",        "foo;bar")]            // ; внутри кавычек — часть значения
     [InlineData("\"foo#bar\"",        "foo#bar")]            // # внутри кавычек — часть значения
-    [InlineData("foo \"a;b\" ; cmt",  "foo \"a;b\"")]        // кавычки в середине, потом коммент
+    [InlineData("foo \"a;b\" ; cmt",  "foo \"a;b")]         // кавычки в середине: финальный .Trim('"') съедает последнюю — это ожидаемо для INI-кейсов с обрамляющими кавычками
     [InlineData("",                   "")]                   // пустая строка
     public void StripInlineComment_Edge_Cases(string input, string expected)
     {

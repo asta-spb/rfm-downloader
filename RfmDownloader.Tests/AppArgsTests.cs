@@ -7,14 +7,17 @@ public class AppArgsTests
     // ── ParseMode (строгая валидация) ───────────────────────────────────────
 
     [Theory]
-    [InlineData("test", RunMode.Test)]
-    [InlineData("prod", RunMode.Prod)]
-    [InlineData("TEST", RunMode.Test)]
-    [InlineData("Prod", RunMode.Prod)]
-    [InlineData("  test ", RunMode.Test)]
-    public void ParseMode_Accepts_Valid(string s, RunMode expected)
+    [InlineData("test", false)]
+    [InlineData("prod", true)]
+    [InlineData("TEST", false)]
+    [InlineData("Prod", true)]
+    [InlineData("  test ", false)]
+    public void ParseMode_Accepts_Valid(string input, bool expectedIsProd)
     {
-        Assert.Equal(expected, AppArgs.ParseMode(s));
+        // RunMode внутренний — в публичную подпись теста не выносим, проверяем
+        // через bool. true = Prod, false = Test.
+        var actual = AppArgs.ParseMode(input);
+        Assert.Equal(expectedIsProd, actual == RunMode.Prod);
     }
 
     [Theory]
