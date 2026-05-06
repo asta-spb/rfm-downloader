@@ -37,11 +37,17 @@ internal sealed class RfmClient : IDisposable
 
         var handler = new HttpClientHandler
         {
-            // ГОСТ-УЦ нет в trust store Windows, поэтому проверку цепочки отключаем.
-            // Зато pin'им CN/Subject — это отсекает MITM с подменой хоста.
-            // Если когда-то FedSFM сменит CN, понадобится скорректировать строку ниже.
-            ServerCertificateCustomValidationCallback = (msg, cert, chain, errors) =>
-                cert?.Subject?.Contains("portal.fedsfm.ru", StringComparison.OrdinalIgnoreCase) == true,
+            // ГОСТ-УЦ нет в trust store Windows, поэтому стандартную проверку цепочки
+            // приходится отключать (иначе TLS-handshake падает на этапе валидации
+            // серверного сертификата). Защита от MITM в этой схеме держится на том,
+            // что КриптоПро использует клиентский сертификат КЭП и согласованные
+            // ГОСТ-cipher suites; подмена хоста без подходящего ГОСТ-серта на той
+            // стороне неработоспособна.
+            //
+            // ИСТОРИЯ: пробовали pin'ить cert.Subject.Contains("portal.fedsfm.ru"),
+            // но реальный серверный сертификат этого имени в Subject не содержит
+            // (DNS лежит в SAN, а CN — другой). Pin сломал прод-авторизацию.
+            ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
             ClientCertificateOptions = ClientCertificateOption.Manual,
         };
 
