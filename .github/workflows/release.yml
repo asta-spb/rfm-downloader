@@ -1,0 +1,93 @@
+# Сборка self-contained RfmDownloader.exe и публикация GitHub Release.
+#
+# Триггер — push тега вида v1.2.3.
+#
+# Делаем релиз так:
+#   git tag v1.0.0
+#   git push origin v1.0.0
+#
+# После пуша тега GH Actions:
+#   1. соберёт .exe с win-x64 рантаймом внутри (без .NET на целевой машине);
+#   2. упакует exe + README + LICENSE + config.ini.example в zip;
+#   3. создаст Release с автогенерируемыми release notes из коммитов.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write   # нужно для создания Release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # для генерации release notes по предыдущим тегам
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Extract version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"           # v1.0.0
+          $version = $tag.TrimStart('v')            # 1.0.0
+          "VERSION=$version" >> $env:GITHUB_OUTPUT
+          "TAG=$tag"         >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $version (from tag $tag)"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test (релиз без зелёных тестов не выпускаем)
+        run: dotnet test -c Release --no-build --verbosity normal
+
+      - name: Publish self-contained single-file exe
+        shell: pwsh
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:Version=${{ steps.version.outputs.VERSION }} `
+            -o publish
+
+      - name: Package as zip
+        id: pack
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
+          $zip = "RfmDownloader-$version-win-x64.zip"
+
+          # Только нужное в архиве — exe, доки, шаблон конфига, лицензия.
+          # PDB и прочий мусор отбрасываем.
+          $files = @(
+            'publish/RfmDownloader.exe',
+            'README.md',
+            'LICENSE',
+            'config.ini.example'
+          )
+          Compress-Archive -Path $files -DestinationPath $zip -Force
+
+          "ZIP=$zip" >> $env:GITHUB_OUTPUT
+          Write-Host "Created $zip ($((Get-Item $zip).Length) bytes)"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: RfmDownloader ${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
+          files: ${{ steps.pack.outputs.ZIP }}
+          fail_on_unmatched_files: true

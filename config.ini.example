@@ -1,0 +1,13 @@
+[mode]
+mode       = test        ; test или prod
+
+[credentials]
+user       = ВАШ_ЛОГИН
+password   = ВАШ_ПАРОЛЬ
+
+[certificate]
+thumbprint = A1B2C3D4...  ; отпечаток сертификата (без пробелов)
+
+[output]
+folder     = rfm_data
+timeout    = 60

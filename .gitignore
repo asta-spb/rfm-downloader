@@ -1,0 +1,47 @@
+## .NET
+bin/
+obj/
+publish/
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+
+## OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+## Build output
+*.exe
+*.dll
+*.pdb
+
+## Secrets / credentials
+config.ini
+run.txt
+
+## Output data
+rfm_data/
+
+## Office lock-файлы и сами Word-документы
+## (исходник API-доки от FedSFM держим локально, в репо — только md-версия в docs/skr/)
+~$*
+*.docx
+
+## Документация — держим только локально (исходники FedSFM, не для публикации)
+docs/
+
+## Релизные артефакты — собираются в CI/локальным скриптом, в репо не нужны
+RfmDownloader-*-win-x64.zip
+
+## Резервные копии и временные файлы скриптов
+*.bak
+.sections.pkl
+
+## Claude Code
+.claude/
