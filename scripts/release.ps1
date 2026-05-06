@@ -37,7 +37,9 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 if (Test-Path publish) { Remove-Item -Recurse -Force publish }
 
 Write-Host "Собираю self-contained .exe..."
-dotnet publish -c Release -r win-x64 --self-contained true `
+# Явно указываем csproj — без этого dotnet publish видит solution
+# и пытается паблишить тестовый проект, который не Exe и не поддерживает PublishSingleFile.
+dotnet publish RfmDownloader.csproj -c Release -r win-x64 --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:Version=$Version `
