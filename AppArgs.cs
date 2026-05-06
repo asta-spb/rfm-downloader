@@ -133,7 +133,7 @@ internal sealed class AppArgs
             "  -m, --mode           test|prod    Режим работы              (по умолчанию: test)\n" +
             "  -u, --user           <логин>      Логин личного кабинета\n" +
             "  -p, --password       <пароль>     Пароль личного кабинета\n" +
-            "  -t, --thumbprint     <отпечаток>  Отпечаток сертификата Windows\n" +
+            "  -t, --thumbprint     <отпечаток>  Отпечаток сертификата КЭП (ОБЯЗАТЕЛЬНО)\n" +
             "  -o, --output         <папка>      Базовая папка для файлов  (по умолчанию: rfm_data)\n" +
             "  -T, --timeout        <секунды>    Таймаут HTTP              (по умолчанию: 60)\n" +
             "  -f, --fes            <файл>       XML-файл ФЭС для отправки\n" +
@@ -149,8 +149,8 @@ internal sealed class AppArgs
             "Приоритет: ключи командной строки > config.ini > значения по умолчанию\n\n" +
             "Примеры:\n" +
             "  # Информационные команды\n" +
-            "  RfmDownloader.exe --list-certs                  # сертификаты в Windows-хранилище\n" +
             "  RfmDownloader.exe --version                     # версия и время сборки\n" +
+            "  RfmDownloader.exe --list-certs                  # сертификаты в Windows-хранилище\n" +
             "\n" +
             "  # Загрузка перечней\n" +
             "  RfmDownloader.exe                               # из config.ini; если mode не задан — test\n" +

@@ -92,7 +92,7 @@ RfmDownloader.exe
 | `-m`     | `--mode test\|prod`    | Режим работы                                                                   | test         |
 | `-u`     | `--user <логин>`       | Логин личного кабинета                                                         | rfm          |
 | `-p`     | `--password <пароль>`  | Пароль                                                                         | XXX          |
-| `-t`     | `--thumbprint <отп.>`  | Отпечаток сертификата Windows                                                  | —            |
+| `-t`     | `--thumbprint <отп.>`  | Отпечаток сертификата КЭП в Windows-хранилище **(обязательный)**               | —            |
 | `-o`     | `--output <папка>`     | Базовая папка для сохранения файлов                                            | rfm_data     |
 | `-T`     | `--timeout <сек>`      | Таймаут HTTP-запросов                                                          | 60           |
 | `-f`     | `--fes <файл>`         | XML-файл ФЭС для отправки                                                      | —            |
@@ -112,28 +112,27 @@ RfmDownloader.exe
 ## Примеры
 
 ```bat
-RfmDownloader.exe --list-certs
+# Информационные команды
+RfmDownloader.exe --version                                   # версия и время сборки
+RfmDownloader.exe --list-certs                                # сертификаты в Windows-хранилище
 
-RfmDownloader.exe                              # тестовый, из config.ini
-RfmDownloader.exe --mode prod                  # продуктовый, из config.ini
-RfmDownloader.exe --config prod.ini            # отдельный ini для прода
-RfmDownloader.exe --mode prod --output D:\rfm  # прод + своя папка
-RfmDownloader.exe --mode test --thumbprint A1B2C3...  # тест с явным сертификатом
+# Загрузка перечней (--thumbprint обязателен — обычно из config.ini)
+RfmDownloader.exe                                             # из config.ini; если mode не задан — test
+RfmDownloader.exe --mode prod                                 # продуктовый контур
+RfmDownloader.exe --config prod.ini                           # отдельный ini-файл
+RfmDownloader.exe --mode prod --output D:\rfm                 # прод + своя папка
+RfmDownloader.exe --mode test --thumbprint A1B2C3...          # тест с явным сертификатом
 
 # Отправка ФЭС
-RfmDownloader.exe --fes message.xml            # отправить ФЭС
-RfmDownloader.exe --fes msg.xml --mchd m.xml           # ФЭС с МЧД
+RfmDownloader.exe --fes message.xml                           # отправить ФЭС
+RfmDownloader.exe --fes msg.xml --mchd m.xml                  # ФЭС с МЧД
 
 # Логирование в файл
-RfmDownloader.exe --log rfm.log                # вывод дублируется в rfm.log
-RfmDownloader.exe --log rfm.log --mode prod    # прод с логированием
+RfmDownloader.exe --log rfm.log                               # вывод дублируется в rfm.log
+RfmDownloader.exe --log rfm.log --mode prod                   # прод с логированием
 
-# Пакетный режим: файлы прямо в указанную папку, без подпапки с датой
+# Пакетный режим: файлы прямо в --output, без подпапки с датой
 RfmDownloader.exe --mode prod --output D:\batch\job_42 --no-subdir
-
-# Версия и время сборки
-RfmDownloader.exe --version
-# RfmDownloader 1.0.0 (build 2026-05-06 11:50:00 UTC)
 ```
 
 ---

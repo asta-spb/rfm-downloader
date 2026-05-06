@@ -86,16 +86,21 @@ internal static class Program
             }
             Logger.Info($"Папка сохранения: {outDir}");
 
+            // Клиентский сертификат КЭП обязателен — без него не пройдёт ГОСТ-TLS
+            // handshake с portal.fedsfm.ru:8081. Падаем сразу с понятной ошибкой,
+            // а не позже на сетевом уровне.
             var cert = CertHelper.FindCert(cfg.Thumbprint);
-            if (cert is null && cfg.Thumbprint is not null)
+            if (cert is null)
             {
-                Logger.Error($"Сертификат с отпечатком «{cfg.Thumbprint}» не найден.");
+                if (cfg.Thumbprint is null)
+                    Logger.Error("Сертификат не указан. Задайте отпечаток через --thumbprint (-t) " +
+                                 "или в config.ini, секция [certificate] thumbprint = ...");
+                else
+                    Logger.Error($"Сертификат с отпечатком «{cfg.Thumbprint}» не найден в Windows-хранилище. " +
+                                 "Список доступных: RfmDownloader.exe --list-certs");
                 return 1;
             }
-            if (cert is not null)
-                Logger.Info($"Сертификат: {cert.Subject}  [{cert.Thumbprint}]");
-            else
-                Logger.Warn("Сертификат не указан — попытка без клиентского сертификата.");
+            Logger.Info($"Сертификат: {cert.Subject}  [{cert.Thumbprint}]");
 
             var ep = Endpoints.For(cfg.Mode);
             using var client = new RfmClient(cert, outDir, cfg.TimeoutSec, ep,
